@@ -1,0 +1,49 @@
+{
+  "name": "Evaluación Competencial ESO - IES Virgen de Villadiego",
+  "short_name": "Perfil Competencial",
+  "description": "Aplicación para la gestión y evaluación competencial del alumnado de ESO según la LOMLOE. Permite procesar calificaciones por descriptor operativo, calcular objetivos de etapa y determinar la titulación.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f4f6",
+  "theme_color": "#4f46e5",
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Procesar Calificaciones",
+      "short_name": "Procesar",
+      "description": "Cargar y procesar archivos de calificaciones",
+      "url": "./index.html#procesar",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
