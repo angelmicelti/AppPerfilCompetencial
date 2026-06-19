@@ -1442,6 +1442,11 @@
             data.forEach((student, index) => {
                 const tr = document.createElement('tr');
                 tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                // Hacer la fila clicable: al pulsar, selecciona ese alumno en la
+                // tabla de Objetivos de Etapa (si está visible, i.e. en 4º ESO).
+                tr.style.cursor = 'pointer';
+                tr.setAttribute('data-student-idx', index);
+                tr.onclick = () => selectStudentInObjectives(index);
                 
                 let html = `<td class="px-6 py-3 border-b border-gray-200 font-medium text-gray-900 sticky left-0 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">${escapeHTML(student.name)}</td>`;
                 
@@ -1460,6 +1465,37 @@
 
             // Actualizar también la tabla de objetivos si es 4º ESO
             updateObjectivesSection();
+        }
+
+        // Selecciona un alumno en la tabla de Objetivos de Etapa.
+        // Llamado al hacer clic en una fila de la tabla de Perfil Competencial.
+        function selectStudentInObjectives(index) {
+            const select = document.getElementById('objectives-student-select');
+            if (!select) return;
+
+            // Si la sección de objetivos no está visible (no es 4º ESO o no hay datos),
+            // no hacer nada silenciosamente.
+            const section = document.getElementById('objectives-section');
+            if (section.classList.contains('hidden')) return;
+
+            // Verificar que el índice es válido
+            if (!currentProcessedData || index < 0 || index >= currentProcessedData.length) return;
+
+            // Actualizar el selector
+            select.value = String(index);
+
+            // Renderizar la tabla de objetivos para el alumno seleccionado
+            renderObjectivesTable();
+
+            // Resaltar la fila seleccionada en la tabla de Perfil Competencial
+            document.querySelectorAll('#results-body tr').forEach(tr => {
+                const idx = parseInt(tr.getAttribute('data-student-idx'), 10);
+                if (idx === index) {
+                    tr.classList.add('ring-2', 'ring-indigo-400', 'ring-inset');
+                } else {
+                    tr.classList.remove('ring-2', 'ring-indigo-400', 'ring-inset');
+                }
+            });
         }
 
         // ============================================================
