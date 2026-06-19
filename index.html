@@ -2,13 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
 
     <!-- PWA: Metadatos -->
     <title>Evaluación Competencial ESO - IES Virgen de Villadiego</title>
     <meta name="description" content="Gestión y evaluación competencial del alumnado de ESO (LOMLOE) - IES Virgen de Villadiego, Peñaflor (Sevilla)">
     <meta name="theme-color" content="#4f46e5">
     <meta name="color-scheme" content="light">
+
+    <!-- Android: color de la barra de estado y navegación del sistema -->
+    <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#3730a3" media="(prefers-color-scheme: dark)">
+
+    <!-- Android: comportamiento de la PWA -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-status-bar-style" content="black-translucent">
 
     <!-- PWA: Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -133,6 +141,338 @@
             table { page-break-inside: auto; }
             tr { page-break-inside: avoid; break-inside: avoid; }
             thead { display: table-header-group; }
+        }
+
+        /* ============================================================ */
+        /*  RESPONSIVE: móvil y multiplataforma                          */
+        /* ============================================================ */
+
+        /* Safe areas: respetar el notch/dynamic island de iPhone y la barra de navegación.
+           env() devuelve 0 en dispositivos sin notch, así que es seguro usarlo siempre. */
+        html {
+            overflow-x: hidden;
+            max-width: 100vw;
+        }
+        body {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            /* Prevenir scroll horizontal accidental en móvil */
+            overflow-x: hidden;
+            max-width: 100vw;
+        }
+        /* El main también debe prevenir scroll horizontal: los contenedores internos
+           (table-container, overflow-x-auto) gestionan su propio scroll horizontal. */
+        main {
+            overflow-x: hidden;
+            max-width: 100vw;
+        }
+        /* Los contenedores max-w-7xl deben respetar el ancho del viewport en móvil */
+        @media (max-width: 640px) {
+            nav .max-w-7xl,
+            main.max-w-7xl {
+                max-width: 100% !important;
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+        }
+
+        /* Evitar el zoom automático de iOS al enfocar inputs con font-size < 16px */
+        @media (max-width: 640px) {
+            input[type="text"],
+            input[type="password"],
+            input[type="email"],
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+        }
+
+        /* Login screen en móvil: padding reducido y tarjeta más compacta */
+        @media (max-width: 640px) {
+            #login-screen {
+                padding: 1rem;
+                align-items: flex-start;
+                padding-top: calc(env(safe-area-inset-top) + 2rem);
+            }
+            #login-screen > div {
+                margin: 0 !important;
+                padding: 1.5rem !important;
+                max-width: 100% !important;
+            }
+            #login-screen h1 {
+                font-size: 1.25rem !important;
+            }
+        }
+
+        /* Navbar: en móvil, los botones de usuario más compactos */
+        @media (max-width: 768px) {
+            #user-bar {
+                gap: 0.5rem !important;
+            }
+            #user-bar span:first-child {
+                display: none; /* "Conectado:" */
+            }
+            #btn-user-admin span:last-child,
+            #user-bar > button:last-child span:last-child {
+                display: none; /* solo icono */
+            }
+        }
+
+        /* Tablas: scroll horizontal suave y controlado en móvil.
+           -webkit-overflow-scrolling: touch da scroll con momentum en iOS.
+           touch-action: pan-x permite scroll horizontal sin interferir con el vertical. */
+        .table-container,
+        .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x;
+            /* Esconder la barra de scroll fea en escritorio pero mantenerla funcional */
+            scrollbar-width: thin;
+        }
+        .table-container::-webkit-scrollbar,
+        .overflow-x-auto::-webkit-scrollbar {
+            height: 6px;
+        }
+        .table-container::-webkit-scrollbar-thumb,
+        .overflow-x-auto::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        /* La tabla de resultados tiene una columna sticky a la izquierda (nombre del alumno).
+           En móvil, reducir el min-width para que quepa más contenido. */
+        @media (max-width: 640px) {
+            #results-body td:first-child,
+            #results-thead th:first-child {
+                min-width: 120px !important;
+                max-width: 140px;
+                font-size: 0.75rem;
+            }
+            #results-body td {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+                padding-top: 0.5rem !important;
+                padding-bottom: 0.5rem !important;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* Tabla de objetivos: en móvil, columnas aún más estrechas */
+        @media (max-width: 640px) {
+            #objectives-body td,
+            #objectives-thead th {
+                padding-left: 0.25rem !important;
+                padding-right: 0.25rem !important;
+                padding-top: 0.375rem !important;
+                padding-bottom: 0.375rem !important;
+                font-size: 0.625rem !important;
+            }
+            #objectives-thead th {
+                min-width: 32px !important;
+            }
+        }
+
+        /* Modales: en móvil, ocupar casi toda la pantalla */
+        @media (max-width: 640px) {
+            #custom-modal > div,
+            #pdf-modal > div,
+            #user-mgmt-modal > div,
+            #course-mgmt-modal > div,
+            #course-editor-modal > div,
+            #user-editor-modal > div {
+                max-width: 100% !important;
+                margin: 0.5rem !important;
+                padding: 1.25rem !important;
+                max-height: 95vh !important;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        /* Acordeones: en móvil, padding reducido */
+        @media (max-width: 640px) {
+            #upload-section-header,
+            #profile-section-header,
+            #objectives-section-header {
+                padding: 0.75rem !important;
+            }
+            #upload-section-content,
+            #profile-section-content,
+            #objectives-section-content {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+                padding-bottom: 0.75rem !important;
+            }
+        }
+
+        /* Selector de alumnos en objetivos: ocupar todo el ancho en móvil */
+        @media (max-width: 640px) {
+            #objectives-student-select {
+                min-width: 0 !important;
+                width: 100% !important;
+            }
+        }
+
+        /* Grid de carga de archivos: en móvil, 2 columnas con tarjetas más pequeñas */
+        @media (max-width: 640px) {
+            #upload-grid {
+                gap: 0.5rem !important;
+            }
+            #upload-grid > div {
+                height: 6rem !important;
+            }
+            #upload-grid label {
+                padding: 0.5rem !important;
+            }
+        }
+
+        /* Botones: en móvil, ocupar todo el ancho para mejor táctil */
+        @media (max-width: 640px) {
+            #upload-section-content .mt-8 > .flex-wrap {
+                flex-direction: column;
+            }
+            #upload-section-content .mt-8 button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Banner TITULA/NO TITULA: tamaño de fuente ajustable en móvil */
+        @media (max-width: 640px) {
+            #titula-banner {
+                font-size: 1.25rem !important;
+                padding: 1rem !important;
+            }
+        }
+
+        /* Prevenir el "pull-to-refresh" en Android cuando se hace scroll en tablas,
+           que causa que la página se recargue accidentalmente. */
+        @media (max-width: 640px) {
+            body {
+                overscroll-behavior-y: contain;
+            }
+        }
+
+        /* ============================================================ */
+        /*  OPTIMIZACIONES ESPECÍFICAS PARA ANDROID                      */
+        /* ============================================================ */
+
+        /* 1. Touch targets: mínimo 44x44px (recomendación Material Design).
+           Aplicar a todos los botones, opciones de select, y filas clicables
+           de tablas para que sean fácilmente pulsables con el dedo. */
+        @media (max-width: 768px) {
+            button:not([class*="w-4"]):not([class*="w-3"]):not([class*="h-4"]):not([class*="h-3"]) {
+                min-height: 44px;
+            }
+            /* Las filas de tablas clicables también deben ser fáciles de tocar */
+            #results-body tr {
+                min-height: 44px;
+            }
+            /* Opciones de select más grandes */
+            select option {
+                padding: 8px 12px;
+                font-size: 16px;
+            }
+        }
+
+        /* 2. Prevenir selección de texto accidental en elementos de UI.
+           En Android, mantener pulsado un botón puede seleccionar el texto,
+           lo que es confuso. Solo se permite selección en inputs y áreas
+           de contenido (nombres de alumnos, notas, etc.). */
+        button, .btn, nav, th, thead, label[for],
+        .acordeon-header, #upload-section-header,
+        #profile-section-header, #objectives-section-header {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 3. Feedback táctil: efecto visual al pulsar botones y filas.
+           En Android es importante el feedback inmediato al tocar. */
+        @media (max-width: 768px) {
+            button:active,
+            #results-body tr:active,
+            #upload-section-header:active,
+            #profile-section-header:active,
+            #objectives-section-header:active {
+                transform: scale(0.98);
+                transition: transform 0.1s ease;
+            }
+            /* Filas de la tabla: highlight al tocar */
+            #results-body tr:active {
+                background-color: #e0e7ff !important;
+            }
+        }
+
+        /* 4. Prevenir doble-tap zoom en botones y enlaces.
+           touch-action: manipulation elimina el delay de 300ms
+           y previene el doble-tap zoom en Android. */
+        button, a, label, select, input[type="submit"], input[type="button"],
+        #results-body tr,
+        #upload-section-header, #profile-section-header, #objectives-section-header {
+            touch-action: manipulation;
+        }
+
+        /* 5. Scroll suave en toda la app.
+           scroll-behavior: smooth hace que los saltos (p.ej. al hacer clic
+           en una unidad guardada) sean animados en vez de instantáneos. */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* 6. Scroll elástico en contenedores de tablas.
+           En Android, el scroll con -webkit-overflow-scrolling: touch
+           a veces se queda "atascao". overflow-scrolling es el estándar. */
+        .table-container, .overflow-x-auto {
+            overscroll-behavior-x: contain;
+        }
+
+        /* 7. Inputs: prevenir el teclado numérico con autocompletar molesto.
+           En Android, los inputs de texto pueden mostrar sugerencias de
+           autocompletar que tapa el formulario. autocomplete="off" en HTML
+           y estas reglas CSS ayudan. */
+        input::-webkit-autofill,
+        input::-webkit-autofill:hover,
+        input::-webkit-autofill:focus {
+            -webkit-text-fill-color: #1f2937;
+            -webkit-box-shadow: 0 0 0px 1000px #f9fafb inset;
+        }
+
+        /* 8. Modales: en Android, prevenir que el teclado tape el input activo.
+           El truco es que el modal sea scrollable y que el input activo
+           se mantenga visible. */
+        @media (max-width: 768px) {
+            #login-screen input:focus,
+            #user-editor-modal input:focus,
+            #course-editor-modal input:focus {
+                scroll-margin-bottom: 300px; /* espacio para el teclado */
+            }
+        }
+
+        /* 9. Notch /Dynamic Island en Android: algunos dispositivos Android
+           también tienen notch. env() funciona en ambos. */
+        @supports (padding: max(0px)) {
+            nav {
+                padding-top: max(1rem, env(safe-area-inset-top));
+            }
+        }
+
+        /* 10. PWA standalone en Android: ocultar la barra de URL si está
+               instalada como app. Esto ya lo hace display: standalone del
+               manifest, pero aseguramos que no haya margen superior extra. */
+        @media (display-mode: standalone) {
+            body {
+                user-select: none;
+                -webkit-user-select: none;
+            }
+            /* En modo standalone, permitir selección solo en inputs */
+            input, textarea, [contenteditable] {
+                user-select: text;
+                -webkit-user-select: text;
+            }
         }
     </style>
 </head>
@@ -356,7 +696,7 @@
                             <table class="min-w-full text-sm text-left text-gray-600">
                                 <thead class="text-xs text-gray-700 uppercase bg-gray-100 shadow-sm">
                                     <tr>
-                                        <th scope="col" class="px-6 py-4 font-bold rounded-tl-lg bg-gray-100 border-b border-gray-200 min-w-[200px]">Alumno/a</th>
+                                        <th scope="col" class="px-6 py-4 font-bold rounded-tl-lg bg-gray-100 border-b border-gray-200 min-w-[120px]">Alumno/a</th>
                                         <!-- Competencias generadas dinámicamente -->
                                         <script>
                                             // Constante local: este script se ejecuta durante el parsing,
@@ -397,7 +737,7 @@
                             <p class="text-sm text-gray-500">Calificaciones por descriptor operativo. Un objetivo se consigue aprobando al menos la mitad de sus descriptores relacionados.</p>
                             <div class="flex items-center gap-2">
                                 <label class="text-sm font-medium text-gray-600 whitespace-nowrap">Alumno/a:</label>
-                                <select id="objectives-student-select" onchange="renderObjectivesTable()" class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 outline-none transition-colors text-sm min-w-[200px]">
+                                <select id="objectives-student-select" onchange="renderObjectivesTable()" class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 outline-none transition-colors text-sm min-w-[150px]">
                                     <option value="">Cargando alumnos...</option>
                                 </select>
                             </div>
