@@ -1919,30 +1919,37 @@
             thead.innerHTML = '';
 
             // Fila 1: competencias
+            const compColors = {
+                'CCL': 'bg-blue-100 text-blue-800',
+                'CP': 'bg-purple-100 text-purple-800',
+                'STEM': 'bg-green-100 text-green-800',
+                'CD': 'bg-cyan-100 text-cyan-800',
+                'CPSAA': 'bg-orange-100 text-orange-800',
+                'CC': 'bg-yellow-100 text-yellow-800',
+                'CE': 'bg-pink-100 text-pink-800',
+                'CCEC': 'bg-red-100 text-red-800'
+            };
+            // Mapeo descriptor → clase de color de su competencia (para fila 2)
+            const descColors = {};
+            COMPETENCES_ORDER.forEach(comp => {
+                DESCRIPTORS_BY_COMP[comp].forEach(desc => {
+                    descColors[desc] = compColors[comp] || 'bg-gray-100';
+                });
+            });
+
             const tr1 = document.createElement('tr');
             tr1.innerHTML = `<th rowspan="2" class="px-3 py-3 font-bold border-b border-gray-200 sticky left-0 bg-gray-100 min-w-[80px] align-bottom">Objetivo</th>`;
             COMPETENCES_ORDER.forEach(comp => {
                 const n = DESCRIPTORS_BY_COMP[comp].length;
-                // Color único por competencia para distinguirlas visualmente
-                const colors = {
-                    'CCL': 'bg-blue-100 text-blue-800',
-                    'CP': 'bg-purple-100 text-purple-800',
-                    'STEM': 'bg-green-100 text-green-800',
-                    'CD': 'bg-cyan-100 text-cyan-800',
-                    'CPSAA': 'bg-orange-100 text-orange-800',
-                    'CC': 'bg-yellow-100 text-yellow-800',
-                    'CE': 'bg-pink-100 text-pink-800',
-                    'CCEC': 'bg-red-100 text-red-800'
-                };
-                tr1.innerHTML += `<th colspan="${n}" class="px-2 py-2 text-center font-bold border-b border-l border-gray-200 ${colors[comp] || 'bg-gray-100'}">${comp}</th>`;
+                tr1.innerHTML += `<th colspan="${n}" class="px-2 py-2 text-center font-bold border-b border-l border-gray-200 ${compColors[comp] || 'bg-gray-100'}">${comp}</th>`;
             });
             tr1.innerHTML += `<th rowspan="2" class="px-3 py-3 text-center font-extrabold bg-emerald-100 text-emerald-900 border-b border-gray-200 min-w-[100px] align-bottom">Conseguido</th>`;
             thead.appendChild(tr1);
 
-            // Fila 2: descriptores individuales
+            // Fila 2: descriptores individuales (con el color de su competencia)
             const tr2 = document.createElement('tr');
             ALL_DESCRIPTORS.forEach(desc => {
-                tr2.innerHTML += `<th class="px-1 py-2 text-center font-semibold border-b border-r border-gray-200 min-w-[45px] text-[10px]">${desc}</th>`;
+                tr2.innerHTML += `<th class="px-1 py-2 text-center font-semibold border-b border-r border-gray-200 min-w-[45px] text-[10px] ${descColors[desc] || 'bg-gray-100'}">${desc}</th>`;
             });
             thead.appendChild(tr2);
         }
