@@ -108,6 +108,18 @@
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* === Boot: ocultar la app hasta saber si hay sesión === */
+        /* Mientras el body tenga la clase .app-booting, se ocultan nav y main.
+           Esto evita el parpadeo de la pantalla principal antes del login.
+           La clase se elimina en restoreSession() / showApp() / showLoginScreen(). */
+        body.app-booting > nav,
+        body.app-booting > main {
+            visibility: hidden !important;
+        }
+        body.app-booting {
+            background: #4f46e5;
+        }
+
         /* === Estilos para impresión / guardado como PDF nativo === */
         /* Se activan con window.print() cuando el body tiene la clase .printing-pdf.
            El div #print-area contiene el HTML temporal que se va a imprimir. */
@@ -129,7 +141,7 @@
         }
     </style>
 </head>
-<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+<body class="text-gray-800 antialiased min-h-screen flex flex-col app-booting">
 
     <!-- ============================================================ -->
     <!--  PANTALLA DE LOGIN                                            -->
@@ -2028,6 +2040,8 @@
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('user-bar').classList.add('hidden');
             document.getElementById('user-bar').classList.remove('flex');
+            // Quitar la clase de booting: ya sabemos qué mostrar (login)
+            document.body.classList.remove('app-booting');
         }
 
         function showApp() {
@@ -2043,6 +2057,8 @@
                 adminBtn.classList.add('hidden');
                 adminBtn.classList.remove('flex');
             }
+            // Quitar la clase de booting: ya sabemos qué mostrar (app)
+            document.body.classList.remove('app-booting');
         }
 
         // ============================================================
