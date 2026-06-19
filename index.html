@@ -1,0 +1,2985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <!-- PWA: Metadatos -->
+    <title>Evaluación Competencial ESO - IES Virgen de Villadiego</title>
+    <meta name="description" content="Gestión y evaluación competencial del alumnado de ESO (LOMLOE) - IES Virgen de Villadiego, Peñaflor (Sevilla)">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="color-scheme" content="light">
+
+    <!-- PWA: Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- PWA: Iconos -->
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Perfil Competencial">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- PWA: Windows tile -->
+    <meta name="msapplication-TileColor" content="#4f46e5">
+    <meta name="msapplication-tile-image" content="icons/icon-512.png">
+    <meta name="application-name" content="Perfil Competencial">
+
+    <!-- Dependencias externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Firebase SDK (modular v10 via CDN ESM). Solo usamos Realtime Database.
+         No usamos Firebase Authentication porque los usuarios son de tipo
+         "usuario + contraseña" (sin email), y Firebase Auth requiere email.
+         En su lugar, guardamos los usuarios directamente en la BD con la
+         contraseña hasheada con PBKDF2 (Web Crypto API). -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import {
+            getDatabase,
+            ref,
+            get,
+            set,
+            update,
+            remove,
+            onValue,
+            child,
+            push,
+            query,
+            orderByChild,
+            equalTo
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        // Configuración Firebase (proyecto: gestionreducciones)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLq-28-UdAJSqMJOFh5Xsj6UvPZ3HNA4w",
+            authDomain: "gestionreducciones.firebaseapp.com",
+            databaseURL: "https://gestionreducciones-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "gestionreducciones",
+            storageBucket: "gestionreducciones.firebasestorage.app",
+            messagingSenderId: "1057236051663",
+            appId: "1:1057236051663:web:2c8af0f2775f42ee6fb9ba",
+            measurementId: "G-8C0608F1HS"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Rama AISLADA en la Realtime Database compartida.
+        // IMPORTANTE: las reglas de seguridad del proyecto Firebase solo permiten
+        // lectura/escritura bajo /expovilladiego. Por eso anidamos TODA la información
+        // de esta app bajo /expovilladiego/evaluacion_competencial/... para no tocar
+        // (ni ser tocado por) otras apps del mismo proyecto.
+        const DB_ROOT = 'expovilladiego/evaluacion_competencial';
+        // Estructura:
+        //   /expovilladiego/evaluacion_competencial/users/{username}/
+        //       = { passwordHash, passwordSalt, role, createdAt, updatedAt }
+        //   /expovilladiego/evaluacion_competencial/cursos/{cursoId}/
+        //       = { name, createdAt, updatedAt }
+        //   /expovilladiego/evaluacion_competencial/activeCourse/
+        //       = { value: cursoId }   ← curso actualmente seleccionado por el admin
+        //   /expovilladiego/evaluacion_competencial/data/{username}/{cursoId}/{unitKey}/
+        //       = { data, level, unit, timestamp }
+        // (La clave de users es el propio username, en minúsculas. No hay email.)
+        // (Las unidades guardadas se aislan por username Y por curso académico.)
+
+        // Exponer globalmente para que el script clásico (no-module) pueda usarlos
+        window.fbDb = db;
+        window.fbModules = {
+            ref, get, set, update, remove, onValue, child, push,
+            query, orderByChild, equalTo
+        };
+        window.fbConfig = {
+            DB_ROOT,
+            ADMIN_USERS: ['admin'] // usernames con rol admin por defecto (si no hay entry en BD)
+        };
+
+        // Señal para que el script clásico sepa que Firebase está listo
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f3f4f6; }
+        .table-container { max-height: 70vh; overflow-y: auto; }
+        thead th { position: sticky; top: 0; z-index: 10; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* === Estilos para impresión / guardado como PDF nativo === */
+        /* Se activan con window.print() cuando el body tiene la clase .printing-pdf.
+           El div #print-area contiene el HTML temporal que se va a imprimir. */
+        #print-area { display: none; }
+        body.printing-pdf { background: #ffffff !important; }
+        body.printing-pdf > *:not(#print-area) { display: none !important; }
+        body.printing-pdf #print-area { display: block !important; }
+
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            html, body { background: #ffffff !important; }
+            body.printing-pdf > *:not(#print-area) { display: none !important; }
+            body.printing-pdf #print-area { display: block !important; }
+            .pdf-page { page-break-after: always; break-after: page; }
+            .pdf-page:last-child { page-break-after: auto; break-after: auto; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; break-inside: avoid; }
+            thead { display: table-header-group; }
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <!-- ============================================================ -->
+    <!--  PANTALLA DE LOGIN                                            -->
+    <!-- ============================================================ -->
+    <div id="login-screen" class="hidden fixed inset-0 z-[100] bg-gradient-to-br from-indigo-700 via-indigo-800 to-purple-900 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-2xl mb-4">
+                    <svg class="w-9 h-9 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.256-.066a2 2 0 01.79-.066l1.066.066a3 3 0 003.926-3.685l-.243-.724a2 2 0 01.616-2.176l1.586-1.386a3 3 0 10-4-4.472l-1.586 1.386a2 2 0 01-2.176.616l-.724-.243a3 3 0 00-3.685 3.926l.066 1.066a2 2 0 01-.066.79l-.066.256zM15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">Evaluación Competencial</h1>
+                <p class="text-sm text-gray-600 mt-1">IES Virgen de Villadiego - Peñaflor, Sevilla</p>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                    <input type="text" id="login-username" required autocomplete="username" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="ej: admin">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                    <input type="password" id="login-password" required autocomplete="current-password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="••••••••">
+                </div>
+                <div id="login-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+                <button type="submit" id="login-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <span id="login-btn-text">Iniciar sesión</span>
+                </button>
+            </form>
+
+            <p class="text-xs text-gray-400 text-center mt-6">Acceso restringido al profesorado del centro</p>
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="bg-indigo-700 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <svg class="w-8 h-8 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <h1 class="text-xl font-bold tracking-tight">Evaluación Competencial Andalucía</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-sm font-medium text-indigo-200 hidden sm:block">
+                    IES Virgen de Villadiego, Peñaflor, Sevilla
+                </div>
+                <!-- Usuario conectado (se rellena por JS) -->
+                <div id="user-bar" class="hidden flex items-center gap-3 text-sm">
+                    <span class="text-indigo-100">Conectado:</span>
+                    <span id="user-display" class="font-semibold text-white bg-indigo-800 px-3 py-1 rounded-full"></span>
+                    <button onclick="openUserManagement()" id="btn-user-admin" class="hidden bg-amber-500 hover:bg-amber-600 text-white font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5" title="Gestionar usuarios">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        Usuarios
+                    </button>
+                    <button onclick="handleLogout()" class="bg-indigo-800 hover:bg-indigo-900 text-white font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5" title="Cerrar sesión">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Controles de Configuración y Unidades Guardadas -->
+        <div class="flex flex-col md:flex-row gap-6 mb-8">
+            <!-- Selección de Curso Académico, Nivel y Unidad -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex-1">
+                <h2 class="text-lg font-semibold mb-4 text-gray-700">1. Seleccionar Grupo</h2>
+
+                <!-- Curso académico (solo admin puede cambiarlo/gestionarlo) -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-sm font-medium text-gray-600">Curso académico</label>
+                        <button id="btn-manage-courses" onclick="openCourseManagement()" class="hidden text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 py-1 px-2 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-amber-200" title="Gestionar cursos académicos (solo admin)">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            Gestionar cursos
+                        </button>
+                    </div>
+                    <select id="select-course" onchange="onCourseSelected()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors" title="Solo el administrador puede cambiar de curso académico">
+                        <option value="">Cargando cursos...</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nivel</label>
+                        <select id="select-level" onchange="onGroupChanged()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors">
+                            <option value="1">1º ESO</option>
+                            <option value="2">2º ESO</option>
+                            <option value="3">3º ESO</option>
+                            <option value="4">4º ESO</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Unidad</label>
+                        <select id="select-unit" onchange="onGroupChanged()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unidades Guardadas -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex-1 flex flex-col">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700">Unidades Guardadas</h2>
+                    <div class="flex gap-2 flex-wrap justify-end">
+                        <button onclick="exportJSON()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200" title="Guardar a archivo .json">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Exportar
+                        </button>
+                        <input type="file" id="import-json" accept=".json" class="hidden" onchange="importJSON(event)">
+                        <label for="import-json" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200 cursor-pointer" title="Cargar desde archivo .json">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Importar
+                        </label>
+                        <button onclick="openMultiPrintModal()" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-emerald-200" title="Imprimir / Guardar como PDF varias unidades en un único documento">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            Exportar PDF
+                        </button>
+                        <button onclick="confirmDeleteAllUnits()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-red-200" title="Borrar todas las unidades">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Borrar
+                        </button>
+                    </div>
+                </div>
+                <div id="saved-units-container" class="flex flex-wrap gap-2 flex-grow items-start content-start">
+                    <p class="text-sm text-gray-400 italic" id="no-units-msg">No hay unidades guardadas en esta sesión.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Carga de Archivos (Acordeón, inicialmente desplegado) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+            <!-- Cabecera del acordeón (clic para plegar/desplegar) -->
+            <button type="button" onclick="toggleUploadSection()" id="upload-section-header" class="w-full flex justify-between items-center p-6 hover:bg-gray-50 transition-colors text-left">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600 transform transition-transform" id="upload-section-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        2. Cargar Archivos de Calificaciones (.xls, .csv)
+                    </h2>
+                    <p class="text-sm text-gray-500 mt-1 ml-7">Sube los archivos correspondientes a las 8 competencias clave.</p>
+                </div>
+                <span class="text-xs text-gray-400 hidden sm:block" id="upload-section-state">Desplegado</span>
+            </button>
+
+            <!-- Contenido plegable -->
+            <div id="upload-section-content" class="px-6 pb-6">
+                <div class="flex justify-end mb-4">
+                    <button onclick="clearAllFiles()" class="text-sm text-red-600 hover:text-red-800 transition-colors whitespace-nowrap">Limpiar archivos</button>
+                </div>
+
+                <!-- Carga Masiva -->
+                <div class="mb-6 bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                        <h3 class="font-semibold text-indigo-900 flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+                            Carga Masiva
+                        </h3>
+                        <p class="text-sm text-indigo-700 mt-1">Selecciona los 8 archivos a la vez. El sistema los asignará automáticamente a su casilla según el nombre del archivo (CCL.xls, CP.xls, STEM.xls, CD.xls, CPSAA.xls, CC.xls, CE.xls, CCEC.xls).</p>
+                    </div>
+                    <input type="file" id="bulk-upload" multiple accept=".csv, .xls, .xlsx" class="hidden" onchange="handleBulkUpload(event)">
+                    <label for="bulk-upload" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-5 rounded-lg shadow cursor-pointer transition-colors whitespace-nowrap flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Seleccionar Varios Archivos
+                    </label>
+                </div>
+
+                <!-- Grid individual -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="upload-grid">
+                    <!-- Se generan dinámicamente mediante JS -->
+                </div>
+
+                <div class="mt-8 flex flex-wrap gap-4 items-center">
+                    <button onclick="processFiles()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all flex items-center gap-2 transform active:scale-95">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        Procesar Calificaciones
+                    </button>
+                    <!-- Indicador de estado de sincronización en tiempo real con la BD -->
+                    <div id="sync-status" class="hidden flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-gray-100 text-gray-600">
+                        <svg id="sync-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <span id="sync-text">Sincronizando...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div id="results-section" class="hidden fade-in">
+            <!-- Acordeón "Perfil Competencial" (inicialmente desplegado) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
+                <button type="button" onclick="toggleProfileSection()" id="profile-section-header" class="w-full flex justify-between items-center p-4 hover:bg-gray-50 transition-colors text-left">
+                    <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600 transform transition-transform" id="profile-section-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        Perfil Competencial: <span id="current-group-label" class="text-indigo-600"></span>
+                    </h2>
+                </button>
+
+                <!-- Contenido plegable -->
+                <div id="profile-section-content" class="px-4 pb-4">
+                    <div class="flex flex-col sm:flex-row justify-end sm:items-center gap-3 mb-4">
+                        <div class="flex gap-2 justify-end flex-wrap">
+                            <button onclick="printCurrentUnit()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm flex items-center gap-1.5 shadow-sm" title="Imprimir / Guardar como PDF esta unidad">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                Exportar PDF
+                            </button>
+                            <button onclick="confirmDeleteActiveCourse()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm flex items-center gap-1.5 shadow-sm" title="Eliminar este curso de la pantalla y la memoria">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                Eliminar Curso
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="table-wrapper" class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden transition-all duration-300">
+                        <div class="table-container w-full overflow-x-auto">
+                            <table class="min-w-full text-sm text-left text-gray-600">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-100 shadow-sm">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-4 font-bold rounded-tl-lg bg-gray-100 border-b border-gray-200 min-w-[200px]">Alumno/a</th>
+                                        <!-- Competencias generadas dinámicamente -->
+                                        <script>
+                                            const COMPETENCES = ['CCL', 'CP', 'STEM', 'CD', 'CPSAA', 'CC', 'CE', 'CCEC'];
+                                            COMPETENCES.forEach(c => document.write(`<th scope="col" class="px-4 py-4 text-center font-bold border-b border-gray-200 bg-gray-100">${c}</th>`));
+                                        </script>
+                                        <th scope="col" class="px-6 py-4 text-center font-extrabold bg-indigo-50 text-indigo-900 border-b border-indigo-100 rounded-tr-lg">Media Global</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-body">
+                                    <!-- Filas generadas por JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!--  TABLA DE OBJETIVOS DE ETAPA (solo 4º ESO) - Acordeón        -->
+            <!--  Filas: O.1 a O.12 (objetivos de etapa)                       -->
+            <!--  Columnas: descriptores operativos (CCL1, CCL2, ..., CCEC4)   -->
+            <!--  Celdas: calificación del descriptor (verde ≥5, rojo <5)      -->
+            <!-- ============================================================ -->
+            <div id="objectives-section" class="hidden mt-4 fade-in">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <!-- Cabecera del acordeón (clic para plegar/desplegar) -->
+                    <button type="button" onclick="toggleObjectivesSection()" id="objectives-section-header" class="w-full flex justify-between items-center p-4 hover:bg-gray-50 transition-colors text-left">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-600 transform transition-transform" id="objectives-section-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            Objetivos de Etapa - 4º ESO
+                        </h2>
+                    </button>
+
+                    <!-- Contenido plegable -->
+                    <div id="objectives-section-content" class="px-4 pb-4">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
+                            <p class="text-sm text-gray-500">Calificaciones por descriptor operativo. Un objetivo se consigue aprobando al menos la mitad de sus descriptores relacionados.</p>
+                            <div class="flex items-center gap-2">
+                                <label class="text-sm font-medium text-gray-600 whitespace-nowrap">Alumno/a:</label>
+                                <select id="objectives-student-select" onchange="renderObjectivesTable()" class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 outline-none transition-colors text-sm min-w-[200px]">
+                                    <option value="">Cargando alumnos...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Rótulo TITULA / NO TITULA -->
+                        <div id="titula-banner" class="hidden px-6 py-4 text-center font-extrabold text-2xl mb-4"></div>
+
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-xs text-left text-gray-600">
+                                    <thead id="objectives-thead" class="text-xs text-gray-700 uppercase bg-gray-100">
+                                        <!-- Cabeceras generadas dinámicamente por JS -->
+                                    </thead>
+                                    <tbody id="objectives-body">
+                                        <!-- Filas generadas por JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
+                                <p><strong>Leyenda:</strong> <span class="inline-block w-3 h-3 bg-red-500 rounded mr-1 align-middle"></span> Suspensa (&lt;5) &nbsp;|&nbsp; <span class="inline-block w-3 h-3 bg-emerald-500 rounded mr-1 align-middle"></span> Aprobada (≥5) &nbsp;|&nbsp; <span class="inline-block w-3 h-3 bg-gray-200 rounded mr-1 align-middle"></span> Sin relación con este objetivo &nbsp;|&nbsp; <strong>Umbral de titulación:</strong> 6 o más objetivos conseguidos de 12.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Exportar PDF Múltiple -->
+    <div id="pdf-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 transform scale-95 transition-transform" id="pdf-modal-content">
+            <h3 class="text-xl font-bold mb-3 text-gray-800">Exportar PDF de Múltiples Cursos</h3>
+            <p class="text-sm text-gray-500 mb-6">Selecciona las unidades guardadas que deseas incluir en el documento PDF (orientación horizontal). Cada curso se generará en una página individual. Se abrirá el diálogo de impresión del navegador; elige "Guardar como PDF" como destino.</p>
+            
+            <div id="pdf-units-list" class="space-y-2 max-h-60 overflow-y-auto mb-6 border border-gray-100 p-4 rounded-xl bg-gray-50">
+                <!-- Checkboxes dinámicos -->
+            </div>
+
+            <div class="flex justify-between items-center">
+                <button onclick="toggleSelectAllPdfUnits()" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Seleccionar Todos / Ninguno</button>
+                <div class="flex gap-3 flex-wrap justify-end">
+                    <button onclick="closePdfModal()" class="px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors">Cancelar</button>
+                    <button onclick="generateMultiplePrint()" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">Generar PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  MODAL GESTIÓN DE CURSOS ACADÉMICOS (solo admin)             -->
+    <!-- ============================================================ -->
+    <div id="course-mgmt-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 p-8 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">Gestión de Cursos Académicos</h3>
+                    <p class="text-sm text-gray-500 mt-1">Crear, editar y eliminar cursos (ej: 2024-2025). Los datos de cada curso están aislados entre sí.</p>
+                </div>
+                <button onclick="closeCourseMgmtModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-xs text-blue-800">
+                <strong>Importante:</strong> al cambiar el curso activo desde la pantalla principal, todos los usuarios verán las unidades guardadas del curso seleccionado. Los datos no se mezclan entre cursos. Solo el administrador puede cambiar el curso activo.
+            </div>
+
+            <button onclick="openCourseEditor(null)" class="self-start mb-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Añadir curso
+            </button>
+
+            <div class="flex-1 overflow-y-auto border border-gray-200 rounded-xl">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-3 font-bold">Nombre del curso</th>
+                            <th class="px-4 py-3 font-bold">Activo</th>
+                            <th class="px-4 py-3 font-bold text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="course-mgmt-list">
+                        <!-- Filas inyectadas por JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end mt-4">
+                <button onclick="closeCourseMgmtModal()" class="px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  MODAL CREAR / EDITAR CURSO                                   -->
+    <!-- ============================================================ -->
+    <div id="course-editor-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8">
+            <h3 id="course-editor-title" class="text-xl font-bold mb-4 text-gray-800">Añadir curso</h3>
+
+            <form id="course-editor-form" onsubmit="handleCourseEditorSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del curso académico</label>
+                    <input type="text" id="course-editor-name" required maxlength="50" autocomplete="off" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="ej: 2025-2026">
+                    <p class="text-xs text-gray-400 mt-1">Máximo 50 caracteres. Se mostrará tal cual en el selector.</p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeCourseEditor()" class="px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors">Cancelar</button>
+                    <button type="submit" id="course-editor-save" class="px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  MODAL GESTIÓN DE USUARIOS (solo admin)                      -->
+    <!-- ============================================================ -->
+    <div id="user-mgmt-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 p-8 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">Gestión de Usuarios</h3>
+                    <p class="text-sm text-gray-500 mt-1">Crear, editar y eliminar cuentas de profesorado</p>
+                </div>
+                <button onclick="closeUserMgmtModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">
+                <strong>Importante:</strong> los usuarios se guardan en la base de datos con su nombre de usuario y contraseña (sin email). El nombre de usuario debe ser único y sin espacios (solo letras minúsculas, números y guion bajo). La contraseña mínima es de 6 caracteres y se almacena hasheada (PBKDF2 con 100.000 iteraciones).
+            </div>
+
+            <button onclick="openUserEditor(null)" class="self-start mb-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Añadir usuario
+            </button>
+
+            <div class="flex-1 overflow-y-auto border border-gray-200 rounded-xl">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-3 font-bold">Usuario</th>
+                            <th class="px-4 py-3 font-bold">Rol</th>
+                            <th class="px-4 py-3 font-bold text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-mgmt-list">
+                        <!-- Filas inyectadas por JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end mt-4">
+                <button onclick="closeUserMgmtModal()" class="px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  MODAL CREAR / EDITAR USUARIO (con doble contraseña)          -->
+    <!-- ============================================================ -->
+    <div id="user-editor-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60]">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8">
+            <h3 id="user-editor-title" class="text-xl font-bold mb-4 text-gray-800">Añadir usuario</h3>
+
+            <form id="user-editor-form" onsubmit="handleUserEditorSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de usuario</label>
+                    <input type="text" id="user-editor-username" required pattern="[a-z0-9_]+" autocomplete="off" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 lowercase" placeholder="ej: jperez" oninput="this.value = this.value.toLowerCase().replace(/[^a-z0-9_]/g, '')">
+                    <p class="text-xs text-gray-400 mt-1">Solo minúsculas, números y guion bajo.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+                    <select id="user-editor-role" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                        <option value="user">Usuario (solo puede usar la app)</option>
+                        <option value="admin">Admin (puede gestionar usuarios)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" id="user-editor-pass1-label">Contraseña</label>
+                    <input type="password" id="user-editor-pass1" autocomplete="new-password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Mínimo 6 caracteres">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Repetir contraseña</label>
+                    <input type="password" id="user-editor-pass2" autocomplete="new-password" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Repite la misma contraseña">
+                    <p id="user-editor-pass-error" class="hidden text-xs text-red-600 mt-1"></p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeUserEditor()" class="px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors">Cancelar</button>
+                    <button type="submit" id="user-editor-save" class="px-4 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Component -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform scale-95 transition-transform" id="modal-content">
+            <h3 id="modal-title" class="text-xl font-bold mb-3 text-gray-800"></h3>
+            <p id="modal-message" class="text-gray-600 mb-8 leading-relaxed"></p>
+            <div class="flex justify-end gap-3" id="modal-actions">
+                <!-- Botones inyectados por JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner Overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+        <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+        <p class="text-indigo-900 font-medium">Procesando calificaciones...</p>
+    </div>
+
+    <!-- Área de impresión: contenido temporal que se imprime cuando body tiene .printing-pdf -->
+    <div id="print-area" aria-hidden="true"></div>
+
+    <script>
+        // Configuración principal
+        const COMPETENCES_ORDER = ['CCL', 'CP', 'STEM', 'CD', 'CPSAA', 'CC', 'CE', 'CCEC'];
+        const savedUnits = {}; // Almacenamiento en memoria de la sesión
+        let currentProcessedData = null; // Guarda los datos procesados en pantalla
+        let selectAllPdfState = true;
+
+        // ============================================================
+        //  CORRELACIÓN OBJETIVOS DE ETAPA ESO ↔ DESCRIPTORES OPERATIVOS
+        // ============================================================
+        // Fuente: Anexo VI del BOJA 104 (2 junio 2023) - Decreto de enseñanzas
+        // vinculadas a la LOMLOE para Andalucía.
+        //
+        // Hay 12 objetivos de etapa (O.1 a O.12) y 34 descriptores operativos
+        // repartidos entre las 8 competencias clave:
+        //   CCL: 5 descriptores (CCL1..CCL5)
+        //   CP:  3 descriptores (CP1..CP3)
+        //   STEM: 5 descriptores (STEM1..STEM5)
+        //   CD:  5 descriptores (CD1..CD5)
+        //   CPSAA: 5 descriptores (CPSAA1..CPSAA5)
+        //   CC:  4 descriptores (CC1..CC4)
+        //   CE:  3 descriptores (CE1..CE3)
+        //   CCEC: 4 descriptores (CCEC1..CCEC4)
+        //
+        // La matriz OBJETIVE_DESCRIPTORS indica, para cada objetivo de etapa,
+        // qué descriptores operativos (por su código) están directamente relacionados
+        // según la tabla del BOJA.
+
+        // Descriptores por competencia (orden canónico)
+        const DESCRIPTORS_BY_COMP = {
+            'CCL':   ['CCL1', 'CCL2', 'CCL3', 'CCL4', 'CCL5'],
+            'CP':    ['CP1', 'CP2', 'CP3'],
+            'STEM':  ['STEM1', 'STEM2', 'STEM3', 'STEM4', 'STEM5'],
+            'CD':    ['CD1', 'CD2', 'CD3', 'CD4', 'CD5'],
+            'CPSAA': ['CPSAA1', 'CPSAA2', 'CPSAA3', 'CPSAA4', 'CPSAA5'],
+            'CC':    ['CC1', 'CC2', 'CC3', 'CC4'],
+            'CE':    ['CE1', 'CE2', 'CE3'],
+            'CCEC':  ['CCEC1', 'CCEC2', 'CCEC3', 'CCEC4']
+        };
+
+        // Lista lineal de los 34 descriptores en orden
+        const ALL_DESCRIPTORS = Object.values(DESCRIPTORS_BY_COMP).flat();
+
+        // Competencia a la que pertenece cada descriptor (para cabeceras)
+        function descriptorToComp(desc) {
+            for (const comp of COMPETENCES_ORDER) {
+                if (DESCRIPTORS_BY_COMP[comp].includes(desc)) return comp;
+            }
+            return null;
+        }
+
+        // Matriz objetivo → descriptores relacionados (basada en el BOJA Anexo VI).
+        // Cada objetivo se relaciona con los siguientes descriptores operativos:
+        const OBJECTIVE_DESCRIPTORS = {
+            1:  ['CCL5', 'CP3', 'CD5', 'CPSAA3', 'CC3', 'CPSAA2'],
+            2:  ['STEM4', 'STEM5', 'CD5', 'CPSAA5', 'CE1'],
+            3:  ['CCL5', 'CPSAA2', 'CC3', 'CCEC2'],
+            4:  ['CP2', 'CPSAA2', 'CC2', 'CC3', 'CE2', 'CCEC1', 'CCEC2', 'CCEC3'],
+            5:  ['CCL1', 'CCL2', 'STEM1', 'STEM2', 'CD1', 'CD2', 'CPSAA1', 'CE3'],
+            6:  ['CCL4', 'STEM1', 'STEM2', 'STEM3', 'CPSAA4'],
+            7:  ['CCL3', 'STEM3', 'CD3', 'CPSAA4', 'CE1', 'CE2'],
+            8:  ['CCL1', 'CCL2', 'CCL3', 'CP1', 'CP2', 'STEM3', 'CC1', 'CC2', 'CCEC1'],
+            9:  ['CP1', 'CP2', 'CP3'],
+            10: ['CCL4', 'CP3', 'CC1', 'CC2', 'CC4', 'CCEC3'],
+            11: ['CCL3', 'STEM4', 'CD4', 'CPSAA1', 'CPSAA2', 'CC1', 'CC2', 'CC3', 'CE3', 'CCEC1'],
+            12: ['CCEC1', 'CCEC2', 'CCEC3', 'CCEC4']
+        };
+
+        // Descripciones cortas de los 12 objetivos de etapa de la ESO
+        const OBJECTIVE_DESCRIPTIONS = {
+            1:  'Asumir responsablemente sus deberes, conocer y ejercer sus derechos en el respeto a las demás personas, practicar la tolerancia, la cooperación y la solidaridad.',
+            2:  'Desarrollar y consolidar hábitos de disciplina, estudio y trabajo individual y en equipo como condición necesaria para una realización eficaz de las tareas del aprendizaje.',
+            3:  'Valorar y respetar la diferencia de sexos y la igualdad de derechos y oportunidades. Rechazar los estereotipos que supongan discriminación entre hombres y mujeres.',
+            4:  'Fortalecer sus capacidades afectivas en todos los ámbitos de la personalidad y en sus relaciones con los demás, rechazar la violencia, los prejuicios y resolver pacíficamente los conflictos.',
+            5:  'Desarrollar destrezas básicas en la utilización de las fuentes de información para, con sentido crítico, adquirir nuevos conocimientos y competencias tecnológicas.',
+            6:  'Concebir el conocimiento científico como un saber integrado, conocer y aplicar los métodos para identificar los problemas en los diversos campos del conocimiento.',
+            7:  'Desarrollar el espíritu emprendedor, la confianza en sí mismo, la participación, el sentido crítico, la iniciativa personal y la capacidad para aprender a aprender.',
+            8:  'Comprender y expresar con corrección, oralmente y por escrito, en la lengua castellana textos y mensajes complejos. Conocer y respetar el patrimonio cultural de Andalucía.',
+            9:  'Comprender y expresarse en una o más lenguas extranjeras de manera apropiada.',
+            10: 'Conocer, valorar y respetar los aspectos básicos de la cultura y la historia propia y de los demás, apreciando los elementos específicos de la cultura andaluza.',
+            11: 'Conocer y aceptar el funcionamiento del propio cuerpo, afianzar los hábitos de cuidado y salud corporales, e incorporar la educación física y la práctica del deporte.',
+            12: 'Apreciar la creación artística y comprender el lenguaje de las distintas manifestaciones artísticas, utilizando diversos medios de expresión y representación.'
+        };
+
+        // Mapeo inverso obsoleto (mantenido por compatibilidad con código viejo)
+        // No se usa en la nueva tabla de objetivos-descriptores.
+        const COMPETENCE_OBJECTIVES = {
+            'CCL':   [1, 3, 5, 6, 7, 8, 10, 11],
+            'CP':    [1, 4, 8, 9, 10],
+            'STEM':  [2, 5, 6, 7, 8, 11],
+            'CD':    [1, 2, 5, 7, 11],
+            'CPSAA': [1, 2, 3, 4, 5, 6, 7, 8, 11],
+            'CC':    [1, 3, 4, 8, 10, 11],
+            'CE':    [2, 4, 5, 7, 11],
+            'CCEC':  [3, 4, 8, 10, 11, 12]
+        };
+
+        // Para cada objetivo, devuelve la lista de descriptores relacionados (nueva API).
+        function getObjectiveDescriptors(objNum) {
+            return OBJECTIVE_DESCRIPTORS[objNum] || [];
+        }
+
+        // Calcula el umbral de aprobación: la mitad redondeada hacia arriba.
+        // Si son pares (ej 6) → 3 aprobados.
+        // Si son impares (ej 7) → 4 aprobados (entero inmediatamente superior a la mitad).
+        function approvalThreshold(total) {
+            return Math.ceil(total / 2);
+        }
+
+        // Elementos del DOM
+        const grid = document.getElementById('upload-grid');
+        const modal = document.getElementById('custom-modal');
+        const loading = document.getElementById('loading-overlay');
+
+        // Inicializar interfaz de subida
+        function initUploadGrid() {
+            grid.innerHTML = '';
+            COMPETENCES_ORDER.forEach(comp => {
+                const id = `file-${comp}`;
+                const html = `
+                    <div class="relative group">
+                        <input type="file" id="${id}" accept=".csv, .xls, .xlsx" class="hidden" onchange="updateFileLabel('${comp}')">
+                        <label for="${id}" id="label-${comp}" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-indigo-50 hover:border-indigo-400 transition-all">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500 group-hover:text-indigo-500">
+                                <svg class="w-8 h-8 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                <p class="mb-1 text-sm font-semibold">${comp}</p>
+                                <p class="text-xs opacity-70 text-center px-2 truncate w-full" id="filename-${comp}">Sin seleccionar</p>
+                            </div>
+                        </label>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // Actualizar UI al seleccionar archivo
+        function updateFileLabel(comp) {
+            const input = document.getElementById(`file-${comp}`);
+            const label = document.getElementById(`label-${comp}`);
+            const filename = document.getElementById(`filename-${comp}`);
+            
+            if (input.files && input.files[0]) {
+                label.classList.replace('border-gray-300', 'border-emerald-500');
+                label.classList.replace('bg-gray-50', 'bg-emerald-50');
+                filename.textContent = input.files[0].name;
+                filename.classList.replace('opacity-70', 'text-emerald-600');
+                filename.title = input.files[0].name;
+            } else {
+                // Estado por defecto si se borra
+                label.classList.remove('border-emerald-500', 'bg-emerald-50');
+                label.classList.add('border-gray-300', 'bg-gray-50');
+                filename.textContent = 'Sin seleccionar';
+                filename.classList.replace('text-emerald-600', 'opacity-70');
+                filename.title = '';
+            }
+        }
+
+        // --- CARGA MASIVA ---
+        function handleBulkUpload(event) {
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            const matchedFiles = new Set();
+            let countMatches = 0;
+
+            COMPETENCES_ORDER.forEach(comp => {
+                const regex = new RegExp(`\\b${comp}\\b`, 'i');
+                const file = files.find(f => {
+                    if (matchedFiles.has(f.name)) return false;
+                    return regex.test(f.name);
+                });
+
+                if (file) {
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    const input = document.getElementById(`file-${comp}`);
+                    input.files = dataTransfer.files;
+                    
+                    updateFileLabel(comp);
+                    matchedFiles.add(file.name);
+                    countMatches++;
+                }
+            });
+
+            if (countMatches < COMPETENCES_ORDER.length) {
+                const faltantes = COMPETENCES_ORDER.filter(c => !document.getElementById(`file-${c}`).files[0]);
+                showModal('Asignación incompleta', `Se asignaron ${countMatches} archivos. Faltan por identificar: ${faltantes.join(', ')}. Puedes seleccionarlos manualmente.`, [
+                    { text: 'Entendido', type: 'primary' }
+                ]);
+            }
+
+            event.target.value = '';
+        }
+
+        function clearAllFiles() {
+            COMPETENCES_ORDER.forEach(comp => {
+                const input = document.getElementById(`file-${comp}`);
+                if (input) input.value = '';
+                updateFileLabel(comp);
+            });
+            document.getElementById('bulk-upload').value = '';
+        }
+
+        // ============================================================
+        //  ACORDEÓN DE LA SECCIÓN DE CARGA DE ARCHIVOS
+        // ============================================================
+        // Estado del acordeón: true = desplegado, false = plegado.
+        // Inicialmente desplegado (según requisito del usuario).
+        let _uploadSectionExpanded = true;
+
+        // Plegar/desplegar la sección 2 (Carga de Archivos).
+        function toggleUploadSection() {
+            _uploadSectionExpanded = !_uploadSectionExpanded;
+            const content = document.getElementById('upload-section-content');
+            const chevron = document.getElementById('upload-section-chevron');
+            const stateLabel = document.getElementById('upload-section-state');
+
+            if (_uploadSectionExpanded) {
+                content.classList.remove('hidden');
+                chevron.classList.remove('-rotate-90');
+                if (stateLabel) stateLabel.textContent = 'Desplegado';
+            } else {
+                content.classList.add('hidden');
+                chevron.classList.add('-rotate-90');
+                if (stateLabel) stateLabel.textContent = 'Plegado';
+            }
+        }
+
+        // ============================================================
+        //  ACORDEONES DE "PERFIL COMPETENCIAL" Y "OBJETIVOS DE ETAPA"
+        // ============================================================
+        // Ambos son acordeones inicialmente desplegados, con el mismo
+        // estilo y tamaño de fuente (text-xl) que la sección de carga.
+        let _profileSectionExpanded = true;
+        let _objectivesSectionExpanded = true;
+
+        function toggleProfileSection() {
+            _profileSectionExpanded = !_profileSectionExpanded;
+            const content = document.getElementById('profile-section-content');
+            const chevron = document.getElementById('profile-section-chevron');
+            if (_profileSectionExpanded) {
+                content.classList.remove('hidden');
+                chevron.classList.remove('-rotate-90');
+            } else {
+                content.classList.add('hidden');
+                chevron.classList.add('-rotate-90');
+            }
+        }
+
+        function toggleObjectivesSection() {
+            _objectivesSectionExpanded = !_objectivesSectionExpanded;
+            const content = document.getElementById('objectives-section-content');
+            const chevron = document.getElementById('objectives-section-chevron');
+            if (_objectivesSectionExpanded) {
+                content.classList.remove('hidden');
+                chevron.classList.remove('-rotate-90');
+            } else {
+                content.classList.add('hidden');
+                chevron.classList.add('-rotate-90');
+            }
+        }
+
+        // ============================================================
+        //  SEGURIDAD: CAMBIO DE NIVEL/UNIDAD OBLIGA A RECARGAR ARCHIVOS
+        // ============================================================
+        // Cuando el usuario cambia el nivel o la unidad, si hay archivos
+        // cargados (ya seleccionados en los inputs), se limpian automáticamente.
+        // Esto evita que se procesen en un grupo datos que correspondían a otro.
+        //
+        // Flag para suprimir la limpieza cuando el cambio se hace programáticamente
+        // (por ejemplo, al cargar una unidad guardada con loadUnit).
+        let _suppressGroupChange = false;
+
+        function onGroupChanged() {
+            // Si el cambio fue programático (loadUnit), no hacer nada.
+            if (_suppressGroupChange) return;
+
+            // Comprobar si hay algún archivo cargado en los inputs
+            let anyFile = false;
+            for (const comp of COMPETENCES_ORDER) {
+                const input = document.getElementById(`file-${comp}`);
+                if (input && input.files && input.files.length > 0) {
+                    anyFile = true;
+                    break;
+                }
+            }
+
+            if (anyFile) {
+                // Hay archivos cargados: limpiarlos y avisar al usuario.
+                // No usamos showModal aquí porque onGroupChanged se dispara durante
+                // el evento change del select, y un modal sería intrusivo. En su
+                // lugar, limpiamos silenciosamente y mostramos un aviso visual breve.
+                clearAllFiles();
+                showGroupChangeWarning();
+            }
+
+            // Actualizar también la sección de objetivos (si procede)
+            updateObjectivesSection();
+        }
+
+        // Muestra un aviso temporal (toast) avisando que se han limpiado los archivos
+        // al cambiar de grupo. El aviso desaparece solo a los 5 segundos.
+        function showGroupChangeWarning() {
+            let toast = document.getElementById('group-change-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'group-change-toast';
+                toast.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 z-[80] bg-amber-500 text-white px-6 py-3 rounded-lg shadow-lg text-sm font-medium transition-opacity duration-300';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = '⚠️ Has cambiado de grupo. Los archivos cargados se han limpiado para evitar mezclar datos. Vuelve a seleccionar los archivos correspondientes al nuevo grupo.';
+            toast.style.opacity = '1';
+            toast.style.pointerEvents = 'auto';
+            clearTimeout(window._groupChangeToastTimer);
+            window._groupChangeToastTimer = setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => { toast.style.pointerEvents = 'none'; }, 300);
+            }, 5000);
+        }
+
+        // --- EXPORTAR E IMPORTAR CONFIGURACIÓN (.JSON) ---
+        function exportJSON() {
+            if (Object.keys(savedUnits).length === 0) {
+                showModal('Exportar', 'No hay unidades guardadas para exportar.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            
+            const dataStr = JSON.stringify(savedUnits, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            const dateStr = new Date().toISOString().split('T')[0];
+            a.download = `evaluacion_competencial_${dateStr}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (typeof importedData !== 'object' || importedData === null) throw new Error("Formato inválido");
+                    
+                    let added = 0;
+                    for (const key in importedData) {
+                        if (Object.keys(savedUnits).length >= 8 && !savedUnits[key]) {
+                            continue;
+                        }
+                        savedUnits[key] = importedData[key];
+                        added++;
+                    }
+                    
+                    updateSavedUnitsUI();
+                    
+                    if (added > 0) {
+                        showModal('Importación exitosa', `Se han importado/actualizado ${added} unidades correctamente.`, [{ text: 'Aceptar', type: 'emerald' }]);
+                    } else {
+                        showModal('Límite alcanzado', 'No se han podido importar unidades. El sistema ya contiene el máximo de 8 unidades.', [{ text: 'Entendido', type: 'primary' }]);
+                    }
+                } catch (error) {
+                    showModal('Error de importación', 'El archivo seleccionado no es válido o está corrupto.', [{ text: 'Cerrar', type: 'danger' }]);
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // --- EXPORTACIÓN DE PDF (impresión nativa del navegador) ---
+        // Abre el modal de selección múltiple. Las unidades elegidas se imprimen
+        // vía window.print() → "Guardar como PDF" del navegador.
+        function openMultiPrintModal() {
+            const keys = Object.keys(savedUnits).sort();
+            if (keys.length === 0) {
+                showModal('Exportar PDF', 'No hay unidades guardadas que se puedan exportar a PDF.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+
+            const listContainer = document.getElementById('pdf-units-list');
+            listContainer.innerHTML = '';
+
+            keys.forEach(key => {
+                const item = document.createElement('label');
+                item.className = 'flex items-center gap-3 p-2.5 hover:bg-emerald-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-emerald-100';
+                item.innerHTML = `
+                    <input type="checkbox" name="pdf-unit-checkbox" value="${key}" checked class="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500">
+                    <span class="text-sm font-semibold text-gray-700">${key}</span>
+                `;
+                listContainer.appendChild(item);
+            });
+
+            selectAllPdfState = true;
+            const pdfModal = document.getElementById('pdf-modal');
+            pdfModal.classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('pdf-modal-content').classList.replace('scale-95', 'scale-100');
+            }, 10);
+        }
+
+        function closePdfModal() {
+            document.getElementById('pdf-modal-content').classList.replace('scale-100', 'scale-95');
+            setTimeout(() => {
+                document.getElementById('pdf-modal').classList.add('hidden');
+            }, 200);
+        }
+
+        function toggleSelectAllPdfUnits() {
+            const checkboxes = document.querySelectorAll('input[name="pdf-unit-checkbox"]');
+            selectAllPdfState = !selectAllPdfState;
+            checkboxes.forEach(cb => cb.checked = selectAllPdfState);
+        }
+
+        // ============================================================
+        //  EXPORTACIÓN POR IMPRESIÓN NATIVA DEL NAVEGADOR
+        // ============================================================
+        // Esta vía construye el HTML de cada unidad dentro de #print-area, marca el
+        // body con la clase .printing-pdf (que oculta todo el resto de la interfaz
+        // vía CSS) y llama a window.print(). El usuario elige "Guardar como PDF"
+        // en el diálogo de impresión del navegador.
+        //
+        // Ventajas:
+        //  - 100% fiable en todos los navegadores modernos.
+        //  - El PDF resultante tiene texto seleccionable (no es una imagen).
+        //  - Las tablas largas se paginan automáticamente y repiten la cabecera.
+        //  - Las filas no se cortan a mitad (regla tr { page-break-inside: avoid }).
+        // ============================================================
+
+        // Construye el HTML de una unidad para imprimir. Devuelve string HTML.
+        function buildPrintablePageHTML(key, studentsData) {
+            const rows = studentsData.map((student, sIdx) => {
+                const tds = COMPETENCES_ORDER.map(comp => {
+                    const grade = student.competences[comp];
+                    const style = getGradeStyle(grade);
+                    return `<td style="border:1px solid #e5e7eb;padding:6px 4px;text-align:center;font-weight:600;${style}">${formatNumber(grade)}</td>`;
+                }).join('');
+                const globalStyle = getGradeStyle(student.global);
+                return `<tr style="background-color:${sIdx % 2 === 0 ? '#ffffff' : '#f9fafb'};">
+                    <td style="border:1px solid #e5e7eb;padding:6px 8px;font-weight:500;color:#111827;">${escapeHTML(student.name)}</td>
+                    ${tds}
+                    <td style="border:1px solid #e5e7eb;padding:6px 8px;text-align:center;font-weight:bold;${globalStyle}">${formatNumber(student.global)}</td>
+                </tr>`;
+            }).join('');
+
+            const compHeaders = COMPETENCES_ORDER.map(c =>
+                `<th style="border:1px solid #e5e7eb;padding:8px 6px;text-align:center;font-weight:bold;color:#374151;background:#f3f4f6;">${c}</th>`
+            ).join('');
+
+            const today = new Date().toLocaleDateString('es-ES');
+
+            return `
+                <div class="pdf-page" style="padding:0 0 16px 0;">
+                    <div style="border-bottom:2px solid #4f46e5;padding-bottom:10px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;">
+                        <div>
+                            <h1 style="font-size:22px;font-weight:bold;color:#1e1b4b;margin:0;font-family:system-ui;">Perfil Competencial de Alumnado</h1>
+                            <p style="font-size:12px;color:#4f46e5;font-weight:600;margin:3px 0 0 0;text-transform:uppercase;letter-spacing:0.05em;">IES Virgen de Villadiego - Peñaflor, Sevilla</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="background-color:#e0e7ff;color:#3730a3;padding:5px 14px;border-radius:9999px;font-weight:bold;font-size:14px;font-family:system-ui;">${escapeHTML(key)}</span>
+                        </div>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:10px;font-family:system-ui;margin-bottom:16px;">
+                        <thead>
+                            <tr>
+                                <th style="border:1px solid #e5e7eb;padding:8px;text-align:left;font-weight:bold;color:#374151;background:#f3f4f6;min-width:180px;">Alumno/a</th>
+                                ${compHeaders}
+                                <th style="border:1px solid #e5e7eb;padding:8px;text-align:center;font-weight:bold;color:#1e1b4b;background-color:#e0e7ff;">Media Global</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                    <div style="display:flex;justify-content:space-between;font-size:9px;color:#9ca3af;margin-top:14px;border-top:1px solid #f3f4f6;padding-top:6px;">
+                        <span>Documento Oficial de Evaluación - LOMLOE</span>
+                        <span>IES Virgen de Villadiego • Generado el ${today}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Escapa texto para evitar inyección HTML en nombres de alumnos y claves.
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Imprime (o guarda como PDF) las unidades seleccionadas usando impresión nativa.
+        function generateMultiplePrint() {
+            const checkboxes = document.querySelectorAll('input[name="pdf-unit-checkbox"]:checked');
+            const selectedKeys = Array.from(checkboxes).map(cb => cb.value);
+
+            if (selectedKeys.length === 0) {
+                showModal('Selección vacía', 'Por favor, selecciona al menos una unidad para imprimir.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            closePdfModal();
+            doNativePrint(selectedKeys);
+        }
+
+        // Imprime la unidad actualmente cargada en pantalla.
+        function printCurrentUnit() {
+            if (!currentProcessedData) {
+                showModal('Sin datos', 'No hay datos de unidad cargados en pantalla. Carga o procesa archivos primero.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            const lvl = document.getElementById('select-level').value;
+            const unit = document.getElementById('select-unit').value;
+            const key = getUnitKey(lvl, unit);
+            doNativePrint([key], currentProcessedData);
+        }
+
+        // Función común que construye el HTML, lo inyecta en #print-area y dispara window.print().
+        function doNativePrint(keys, activeData = null) {
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = '';
+
+            keys.forEach(key => {
+                let studentsData = null;
+                if (activeData && keys.length === 1) {
+                    studentsData = activeData;
+                } else {
+                    studentsData = savedUnits[key]?.data;
+                }
+                if (!studentsData) return;
+                printArea.insertAdjacentHTML('beforeend', buildPrintablePageHTML(key, studentsData));
+            });
+
+            if (!printArea.innerHTML.trim()) {
+                showModal('Error', 'No se pudo construir el contenido para imprimir.', [{ text: 'Cerrar', type: 'danger' }]);
+                return;
+            }
+
+            // Marcar el body para activar los CSS @media print y ocultar el resto de la UI.
+            document.body.classList.add('printing-pdf');
+
+            // Hook para restaurar la UI cuando se cierre el diálogo de impresión.
+            // (afterprint se dispara tanto si se imprime como si se cancela).
+            const cleanup = () => {
+                document.body.classList.remove('printing-pdf');
+                printArea.innerHTML = '';
+                window.removeEventListener('afterprint', cleanup);
+            };
+            window.addEventListener('afterprint', cleanup);
+
+            // Pequeño retardo para asegurar que el navegador aplique los estilos @media print.
+            setTimeout(() => {
+                window.print();
+            }, 100);
+        }
+
+        // --- SISTEMA DE MODALES ---
+        function showModal(title, message, buttons) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            
+            const actions = document.getElementById('modal-actions');
+            actions.innerHTML = '';
+            
+            buttons.forEach(btn => {
+                const button = document.createElement('button');
+                button.textContent = btn.text;
+                let btnClass = "px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ";
+                if (btn.type === 'primary') btnClass += "bg-indigo-600 hover:bg-indigo-700 text-white focus:ring-indigo-500";
+                else if (btn.type === 'danger') btnClass += "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500";
+                else if (btn.type === 'emerald') btnClass += "bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-emerald-500";
+                else btnClass += "bg-gray-200 hover:bg-gray-300 text-gray-800 focus:ring-gray-500";
+                
+                button.className = btnClass;
+                button.onclick = () => {
+                    closeModal();
+                    if (btn.action) btn.action();
+                };
+                actions.appendChild(button);
+            });
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('modal-content').classList.replace('scale-95', 'scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            document.getElementById('modal-content').classList.replace('scale-100', 'scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        // --- LÓGICA DE PROCESAMIENTO ---
+        function readFileData(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        const firstSheet = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheet];
+                        const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+                        resolve(json);
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function extractGrade(cell) {
+            if (typeof cell === 'number') return cell;
+            if (typeof cell !== 'string') return null;
+            
+            const match = cell.match(/\(([\d,]+)\)/);
+            if (match) {
+                return parseFloat(match[1].replace(',', '.'));
+            }
+
+            const numStr = cell.trim().replace(',', '.');
+            if (numStr !== '' && !isNaN(parseFloat(numStr)) && isFinite(numStr)) {
+                return parseFloat(numStr);
+            }
+            return null;
+        }
+
+        function processSheet(rows) {
+            // Devuelve un objeto:
+            //   {
+            //     'nombre alumno': {
+            //       average: <media de todas las calificaciones>,  // compatibilidad hacia atrás
+            //       descriptors: { 1: 7.5, 2: 4.0, ... }  // índice secuencial de descriptor
+            //     }
+            //   }
+            //
+            // ESTRUCTURA DEL ARCHIVO:
+            //   - Fila 0: cabecera (se ignora)
+            //   - Filas 1+: una fila por alumno
+            //   - Columna 0: nombre del alumno
+            //   - Columnas 1, 3, 5, 7, 9, ... (B, D, F, H, J en Excel): calificaciones
+            //     numéricas en formato "NT (8,14)" o similar. Una columna por descriptor.
+            //   - Columnas 2, 4, 6, 8, ... (C, E, G, I en Excel): etiquetas qualitativas
+            //     ("Notable", "Bien", ...) que se IGNORAN.
+            //
+            // Por tanto, solo se leen las columnas impares (j = 1, 3, 5, ...) y se
+            // mapean secuencialmente: 1ª columna de nota → descriptor 1, 2ª → descriptor 2, etc.
+            const studentGrades = {};
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || row.length === 0 || !row[0]) continue;
+
+                const studentName = String(row[0]).trim();
+                let sum = 0;
+                let count = 0;
+                const descriptors = {};
+
+                // Solo leer columnas impares (1, 3, 5, 7, 9, ...) = B, D, F, H, J en Excel.
+                // Las columnas pares contienen etiquetas qualitativas y se ignoran.
+                let descNum = 1;
+                for (let j = 1; j < row.length; j += 2) {
+                    const grade = extractGrade(row[j]);
+                    if (grade !== null) {
+                        sum += grade;
+                        count++;
+                        descriptors[descNum] = grade;
+                    }
+                    descNum++;
+                }
+
+                if (count > 0) {
+                    studentGrades[studentName] = {
+                        average: sum / count,
+                        descriptors: descriptors
+                    };
+                }
+            }
+            return studentGrades;
+        }
+
+        async function processFiles() {
+            // Verificar que hay un curso académico activo antes de procesar.
+            // Las unidades se guardan en la BD aisladas por curso; sin curso activo
+            // no se puede sincronizar.
+            if (!currentCourseId) {
+                showModal('Curso no seleccionado', 'No hay un curso académico activo. ' + (isCurrentUserAdmin() ? 'Pulsa "Gestionar cursos" para crear o activar uno.' : 'Pide al administrador que seleccione un curso.'), [
+                    { text: 'Entendido', type: 'primary' }
+                ]);
+                return;
+            }
+
+            const filesData = {};
+            let missingFiles = [];
+
+            COMPETENCES_ORDER.forEach(comp => {
+                const input = document.getElementById(`file-${comp}`);
+                if (input.files && input.files[0]) {
+                    filesData[comp] = input.files[0];
+                } else {
+                    missingFiles.push(comp);
+                }
+            });
+
+            if (missingFiles.length > 0) {
+                showModal('Archivos faltantes', `Por favor, selecciona los archivos para: ${missingFiles.join(', ')}`, [
+                    { text: 'Entendido', type: 'primary' }
+                ]);
+                return;
+            }
+
+            loading.classList.remove('hidden');
+
+            try {
+                const masterData = {};           // masterData[student][comp] = { average, descriptors: {1: grade, 2: grade, ...} }
+                const allStudents = new Set();
+
+                for (const comp of COMPETENCES_ORDER) {
+                    const rows = await readFileData(filesData[comp]);
+                    const grades = processSheet(rows);
+
+                    for (const [student, info] of Object.entries(grades)) {
+                        if (!masterData[student]) masterData[student] = {};
+                        masterData[student][comp] = info;  // { average, descriptors }
+                        allStudents.add(student);
+                    }
+                }
+
+                const finalData = Array.from(allStudents).sort().map(student => {
+                    const data = { name: student, competences: {}, descriptors: {}, global: 0 };
+                    let sum = 0;
+                    let count = 0;
+
+                    COMPETENCES_ORDER.forEach(comp => {
+                        const info = masterData[student][comp];
+                        if (info !== undefined) {
+                            // Nota media de la competencia (para la tabla principal)
+                            data.competences[comp] = info.average;
+                            sum += info.average;
+                            count++;
+
+                            // Calificaciones por descriptor operativo.
+                            // info.descriptors es { 1: grade, 2: grade, ... } donde el
+                            // índice corresponde al descriptor dentro de la competencia.
+                            // Lo traducimos al código canónico (CCL1, CCL2, ...).
+                            const descList = DESCRIPTORS_BY_COMP[comp];
+                            Object.entries(info.descriptors).forEach(([idx, grade]) => {
+                                const n = parseInt(idx, 10);
+                                if (n >= 1 && n <= descList.length) {
+                                    data.descriptors[descList[n - 1]] = grade;
+                                }
+                            });
+                        } else {
+                            data.competences[comp] = null;
+                        }
+                    });
+
+                    data.global = count > 0 ? (sum / count) : null;
+                    return data;
+                });
+
+                currentProcessedData = finalData;
+                
+                renderTable(finalData);
+                document.getElementById('results-section').classList.remove('hidden');
+                
+                const lvl = document.getElementById('select-level').value;
+                const unit = document.getElementById('select-unit').value;
+                const key = getUnitKey(lvl, unit);
+                document.getElementById('current-group-label').textContent = key;
+
+                // === GUARDADO AUTOMÁTICO EN TIEMPO REAL ===
+                // Tras procesar los archivos, los datos se sincronizan con la BD
+                // inmediatamente, sin pedir confirmación al usuario.
+                const unitData = {
+                    data: JSON.parse(JSON.stringify(currentProcessedData)),
+                    level: lvl,
+                    unit: unit,
+                    timestamp: new Date().toLocaleTimeString('es-ES'),
+                    savedAt: Date.now()
+                };
+                savedUnits[key] = unitData;
+                updateSavedUnitsUI();
+                setSyncStatus('syncing');
+                await saveUnitToDB(key, unitData);
+                setSyncStatus('saved');
+
+            } catch (error) {
+                console.error(error);
+                showModal('Error', 'Hubo un problema al procesar los archivos. Asegúrate de que son archivos Excel/CSV válidos.', [
+                    { text: 'Cerrar', type: 'danger' }
+                ]);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        // --- SISTEMA DE COLORES ---
+        function getGradeStyle(grade) {
+            if (grade === null || grade === undefined || isNaN(grade)) {
+                return 'background-color: #f9fafb; color: #9ca3af;';
+            }
+
+            let h, s, l;
+            if (grade >= 5) {
+                const ratio = Math.min(1, Math.max(0, (grade - 5) / 5)); 
+                h = 100 + (ratio * 40);
+                s = 70 + (ratio * 30);
+                l = 85 - (ratio * 45);
+            } else {
+                const ratio = Math.min(1, Math.max(0, (5 - grade) / 4));
+                h = 0;
+                s = 70 + (ratio * 30);
+                l = 85 - (ratio * 40);
+            }
+
+            const textColor = l < 55 ? '#ffffff' : '#1f2937';
+            return `background-color: hsl(${h}, ${s}%, ${l}%); color: ${textColor};`;
+        }
+
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '-';
+            return num.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // --- RENDERIZADO DE TABLA ---
+        function renderTable(data) {
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = '';
+
+            data.forEach((student, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                
+                let html = `<td class="px-6 py-3 border-b border-gray-200 font-medium text-gray-900 sticky left-0 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">${student.name}</td>`;
+                
+                COMPETENCES_ORDER.forEach(comp => {
+                    const grade = student.competences[comp];
+                    const style = getGradeStyle(grade);
+                    html += `<td class="px-4 py-3 border-b border-white text-center font-semibold transition-colors" style="${style}">${formatNumber(grade)}</td>`;
+                });
+
+                const globalStyle = getGradeStyle(student.global);
+                html += `<td class="px-6 py-3 border-b border-white text-center font-bold shadow-sm" style="${globalStyle}">${formatNumber(student.global)}</td>`;
+                
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+
+            // Actualizar también la tabla de objetivos si es 4º ESO
+            updateObjectivesSection();
+        }
+
+        // ============================================================
+        //  TABLA DE OBJETIVOS DE ETAPA (solo 4º ESO) - nueva versión
+        // ============================================================
+        // Calcula, para un alumno dado, el estado de cada uno de los 12 objetivos
+        // de etapa según el nuevo enfoque basado en descriptores operativos:
+        //   - Un objetivo se considera CONSEGUIDO si el alumno ha aprobado
+        //     al menos la mitad (redondeando hacia arriba) de los descriptores
+        //     operativos relacionados con ese objetivo.
+        //   - Ejemplos:
+        //       6 descriptores relacionados → necesita 3 aprobados
+        //       7 descriptores relacionados → necesita 4 aprobados
+        //   - Devuelve un objeto { 1: true/false, ..., 12: true/false, totalAchieved: N }
+        function computeObjectivesStatus(student) {
+            if (!student || !student.descriptors) return { totalAchieved: 0 };
+            const status = {};
+            let totalAchieved = 0;
+            for (let objNum = 1; objNum <= 12; objNum++) {
+                const relatedDescs = getObjectiveDescriptors(objNum);
+                if (relatedDescs.length === 0) {
+                    status[objNum] = false;
+                    continue;
+                }
+                const approved = relatedDescs.filter(desc => {
+                    const g = student.descriptors[desc];
+                    return g !== null && g !== undefined && g >= 5;
+                }).length;
+                const needed = approvalThreshold(relatedDescs.length);
+                const achieved = approved >= needed;
+                status[objNum] = achieved;
+                if (achieved) totalAchieved++;
+            }
+            status.totalAchieved = totalAchieved;
+            return status;
+        }
+
+        // Muestra u oculta la sección de objetivos según el nivel seleccionado.
+        function updateObjectivesSection() {
+            const level = document.getElementById('select-level').value;
+            const section = document.getElementById('objectives-section');
+            if (level === '4' && currentProcessedData) {
+                section.classList.remove('hidden');
+                populateStudentSelector();
+                renderObjectivesTable();
+            } else {
+                section.classList.add('hidden');
+            }
+        }
+
+        // Rellena el selector de alumnos con los datos procesados.
+        function populateStudentSelector() {
+            const select = document.getElementById('objectives-student-select');
+            const prevValue = select.value;
+            select.innerHTML = '';
+
+            if (!currentProcessedData || currentProcessedData.length === 0) {
+                select.innerHTML = '<option value="">No hay alumnos</option>';
+                return;
+            }
+
+            currentProcessedData.forEach((student, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = student.name;
+                select.appendChild(opt);
+            });
+
+            // Mantener la selección previa si sigue siendo válida
+            if (prevValue && prevValue < currentProcessedData.length) {
+                select.value = prevValue;
+            }
+        }
+
+        // Construye las dos filas de cabecera de la tabla:
+        //   Fila 1: "Objetivo" | CCL | CP | STEM | CD | CPSAA | CC | CE | CCEC | "Conseguido"
+        //            (con colspan = nº de descriptores por competencia)
+        //   Fila 2: "" | CCL1 CCL2 ... | CP1 CP2 CP3 | ... | (descriptores individuales)
+        function renderObjectivesHeader() {
+            const thead = document.getElementById('objectives-thead');
+            thead.innerHTML = '';
+
+            // Fila 1: competencias
+            const tr1 = document.createElement('tr');
+            tr1.innerHTML = `<th rowspan="2" class="px-3 py-3 font-bold border-b border-gray-200 sticky left-0 bg-gray-100 min-w-[80px] align-bottom">Objetivo</th>`;
+            COMPETENCES_ORDER.forEach(comp => {
+                const n = DESCRIPTORS_BY_COMP[comp].length;
+                // Color único por competencia para distinguirlas visualmente
+                const colors = {
+                    'CCL': 'bg-blue-100 text-blue-800',
+                    'CP': 'bg-purple-100 text-purple-800',
+                    'STEM': 'bg-green-100 text-green-800',
+                    'CD': 'bg-cyan-100 text-cyan-800',
+                    'CPSAA': 'bg-orange-100 text-orange-800',
+                    'CC': 'bg-yellow-100 text-yellow-800',
+                    'CE': 'bg-pink-100 text-pink-800',
+                    'CCEC': 'bg-red-100 text-red-800'
+                };
+                tr1.innerHTML += `<th colspan="${n}" class="px-2 py-2 text-center font-bold border-b border-l border-gray-200 ${colors[comp] || 'bg-gray-100'}">${comp}</th>`;
+            });
+            tr1.innerHTML += `<th rowspan="2" class="px-3 py-3 text-center font-extrabold bg-emerald-100 text-emerald-900 border-b border-gray-200 min-w-[100px] align-bottom">Conseguido</th>`;
+            thead.appendChild(tr1);
+
+            // Fila 2: descriptores individuales
+            const tr2 = document.createElement('tr');
+            ALL_DESCRIPTORS.forEach(desc => {
+                tr2.innerHTML += `<th class="px-1 py-2 text-center font-semibold border-b border-r border-gray-200 min-w-[45px] text-[10px]">${desc}</th>`;
+            });
+            thead.appendChild(tr2);
+        }
+
+        // Renderiza la tabla de objetivos para el alumno seleccionado.
+        // Filas: O.1 a O.12 (12 objetivos de etapa).
+        // Columnas: 34 descriptores operativos + 1 final "Conseguido".
+        // Celdas:
+        //   - ROJO: descriptor suspensa (<5) Y relacionado con este objetivo.
+        //   - VERDE: descriptor aprobada (≥5) Y relacionado con este objetivo.
+        //   - GRIS: descriptor no relacionado con este objetivo (—).
+        // Última columna: ✓ (verde) si el objetivo está conseguido, ✕ (rojo) si no.
+        function renderObjectivesTable() {
+            const tbody = document.getElementById('objectives-body');
+            const select = document.getElementById('objectives-student-select');
+            const studentIdx = parseInt(select.value, 10);
+
+            // Construir cabecera (es estática pero la regeneramos por si acaso)
+            renderObjectivesHeader();
+
+            if (isNaN(studentIdx) || !currentProcessedData || !currentProcessedData[studentIdx]) {
+                tbody.innerHTML = `<tr><td colspan="${ALL_DESCRIPTORS.length + 2}" class="px-4 py-8 text-center text-gray-400">Selecciona un alumno para ver el detalle de objetivos.</td></tr>`;
+                updateTitulaBanner(null);
+                return;
+            }
+
+            const student = currentProcessedData[studentIdx];
+
+            // Si el estudiante no tiene descriptores (datos antiguos cargados de Firebase
+            // sin la nueva estructura), mostrar un aviso en lugar de la tabla vacía.
+            const descCount = student.descriptors ? Object.keys(student.descriptors).length : 0;
+            if (descCount === 0) {
+                tbody.innerHTML = `<tr><td colspan="${ALL_DESCRIPTORS.length + 2}" class="px-4 py-8 text-center">
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800">
+                        <p class="font-bold mb-2">⚠️ Sin calificaciones de descriptores</p>
+                        <p class="text-sm">Esta unidad se guardó con una versión anterior que no almacenaba las calificaciones por descriptor operativo.</p>
+                        <p class="text-sm mt-2">Para ver la tabla de objetivos, vuelve a cargar los 8 archivos de calificaciones y pulsa <strong>"Procesar Calificaciones"</strong>. Los datos se actualizarán en la base de datos.</p>
+                    </div>
+                </td></tr>`;
+                updateTitulaBanner(null);
+                return;
+            }
+
+            const status = computeObjectivesStatus(student);
+            tbody.innerHTML = '';
+
+            for (let objNum = 1; objNum <= 12; objNum++) {
+                const relatedDescs = getObjectiveDescriptors(objNum);
+                const needed = approvalThreshold(relatedDescs.length);
+                const approved = relatedDescs.filter(d => {
+                    const g = student.descriptors?.[d];
+                    return g !== null && g !== undefined && g >= 5;
+                }).length;
+                const achieved = status[objNum];
+
+                const tr = document.createElement('tr');
+                tr.className = objNum % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+                let html = `<td class="px-3 py-2 border-b border-gray-200 font-bold text-gray-800 sticky left-0 ${objNum % 2 === 0 ? 'bg-white' : 'bg-gray-50'}" title="${escapeHTML(OBJECTIVE_DESCRIPTIONS[objNum])}">
+                    O.${objNum}
+                </td>`;
+
+                // Celdas por descriptor
+                ALL_DESCRIPTORS.forEach(desc => {
+                    const isRelated = relatedDescs.includes(desc);
+                    if (!isRelated) {
+                        html += `<td class="px-1 py-2 border-b border-gray-100 text-center text-gray-300">·</td>`;
+                    } else {
+                        const grade = student.descriptors?.[desc];
+                        if (grade === null || grade === undefined) {
+                            html += `<td class="px-1 py-2 border-b border-gray-100 text-center text-gray-400 bg-gray-100" title="${escapeHTML(desc)}: sin datos">-</td>`;
+                        } else if (grade < 5) {
+                            html += `<td class="px-1 py-2 border-b border-gray-100 text-center font-bold text-white" style="background-color: #dc2626;" title="${escapeHTML(desc)}: ${formatNumber(grade)} (suspenso, contribuye a suspender O.${objNum})">${formatNumber(grade)}</td>`;
+                        } else {
+                            html += `<td class="px-1 py-2 border-b border-gray-100 text-center font-bold text-white" style="background-color: #16a34a;" title="${escapeHTML(desc)}: ${formatNumber(grade)} (aprobado, contribuye a conseguir O.${objNum})">${formatNumber(grade)}</td>`;
+                        }
+                    }
+                });
+
+                // Última columna: estado del objetivo
+                if (achieved) {
+                    html += `<td class="px-2 py-2 border-b border-gray-100 text-center font-extrabold text-white" style="background-color: #16a34a;" title="Aprobados ${approved}/${relatedDescs.length} (necesita ${needed})">✓</td>`;
+                } else {
+                    html += `<td class="px-2 py-2 border-b border-gray-100 text-center font-extrabold text-white" style="background-color: #dc2626;" title="Aprobados ${approved}/${relatedDescs.length} (necesita ${needed})">✕</td>`;
+                }
+
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            }
+
+            // Fila de totales: muestra para cada descriptor si contribuye a algún objetivo
+            // (esto es solo orientativo; el verdadero total está en la última columna).
+            const totalTr = document.createElement('tr');
+            totalTr.className = 'bg-emerald-50 font-bold';
+            let totalHtml = `<td class="px-3 py-3 border-t-2 border-emerald-300 text-gray-800 sticky left-0 bg-emerald-50">TOTAL</td>`;
+            ALL_DESCRIPTORS.forEach(desc => {
+                const grade = student.descriptors?.[desc];
+                if (grade === null || grade === undefined) {
+                    totalHtml += `<td class="px-1 py-3 border-t-2 border-emerald-300 text-center text-gray-400">-</td>`;
+                } else if (grade >= 5) {
+                    totalHtml += `<td class="px-1 py-3 border-t-2 border-emerald-300 text-center text-white" style="background-color: #16a34a;">${formatNumber(grade)}</td>`;
+                } else {
+                    totalHtml += `<td class="px-1 py-3 border-t-2 border-emerald-300 text-center text-white" style="background-color: #dc2626;">${formatNumber(grade)}</td>`;
+                }
+            });
+            totalHtml += `<td class="px-2 py-3 border-t-2 border-emerald-300 text-center font-extrabold text-white" style="background-color: #059669;">
+                ${status.totalAchieved}/12
+            </td>`;
+            totalTr.innerHTML = totalHtml;
+            tbody.appendChild(totalTr);
+
+            // Actualizar rótulo TITULA / NO TITULA
+            updateTitulaBanner(status.totalAchieved);
+
+            // Guardar los objetivos calculados en el objeto del estudiante para
+            // que se sincronicen con Firebase cuando se guarde la unidad.
+            if (!student.objectives) student.objectives = {};
+            for (let objNum = 1; objNum <= 12; objNum++) {
+                student.objectives[objNum] = status[objNum];
+            }
+            student.objectives.totalAchieved = status.totalAchieved;
+            student.objectives.titula = status.totalAchieved >= 6;
+        }
+
+        // Muestra u oculta el rótulo TITULA / NO TITULA.
+        // - 6 o más objetivos conseguidos → "TITULA" (verde, destacado)
+        // - menos de 6 → "NO TITULA" (rojo)
+        function updateTitulaBanner(totalAchieved) {
+            const banner = document.getElementById('titula-banner');
+            if (totalAchieved === null || totalAchieved === undefined) {
+                banner.classList.add('hidden');
+                banner.textContent = '';
+                return;
+            }
+            banner.classList.remove('hidden');
+            if (totalAchieved >= 6) {
+                banner.textContent = `★ TITULA ★ (${totalAchieved}/12 objetivos conseguidos)`;
+                banner.className = 'px-6 py-5 text-center font-extrabold text-2xl bg-emerald-100 text-emerald-800 border-y-2 border-emerald-300';
+            } else {
+                banner.textContent = `✕ NO TITULA ✕ (${totalAchieved}/12 objetivos conseguidos)`;
+                banner.className = 'px-6 py-5 text-center font-extrabold text-2xl bg-red-100 text-red-800 border-y-2 border-red-300';
+            }
+        }
+
+        // --- GESTIÓN DE UNIDADES (MEMORIA + BD) ---
+        function getUnitKey(level, unit) {
+            return `${level}º ESO - ${unit}`;
+        }
+
+        // Normaliza un objeto student para asegurar que tiene la estructura esperada:
+        //   - student.descriptors = { 'CCL1': 8.1, 'CCL2': 7.66, ... } (objeto, no array)
+        //   - student.objectives  = { 1: true, 2: false, ..., totalAchieved: N, titula: bool }
+        //   - student.competences  = { 'CCL': 7.92, ... }
+        // Esto es necesario porque Firebase puede:
+        //   1. Convertir objetos con claves numéricas en arrays (perdiendo claves)
+        //   2. No tener 'descriptors' si la unidad se guardó con una versión anterior
+        function normalizeStudent(s) {
+            if (!s || typeof s !== 'object') return s;
+            // Asegurar que descriptors es un objeto (no array)
+            if (!s.descriptors || typeof s.descriptors !== 'object' || Array.isArray(s.descriptors)) {
+                s.descriptors = {};
+            }
+            // Si descriptors es un array (Firebase convierte {0:.., 1:..} a [.., ..]),
+            // reconstruirlo como objeto usando ALL_DESCRIPTORS como guía.
+            // Esto NO debería pasar con la serialización actual (claves son strings tipo 'CCL1'),
+            // pero lo dejamos por seguridad.
+            if (Array.isArray(s.descriptors)) {
+                const arr = s.descriptors;
+                s.descriptors = {};
+                for (let i = 0; i < arr.length && i < ALL_DESCRIPTORS.length; i++) {
+                    if (arr[i] !== null && arr[i] !== undefined) {
+                        s.descriptors[ALL_DESCRIPTORS[i]] = arr[i];
+                    }
+                }
+            }
+            // Asegurar que objectives es un objeto
+            if (!s.objectives || typeof s.objectives !== 'object' || Array.isArray(s.objectives)) {
+                s.objectives = {};
+            }
+            // Asegurar que competences es un objeto
+            if (!s.competences || typeof s.competences !== 'object' || Array.isArray(s.competences)) {
+                s.competences = {};
+            }
+            return s;
+        }
+
+        // Guarda una unidad en memoria Y en la BD en tiempo real.
+        // No pide confirmación: si la unidad ya existe, se sobrescribe.
+        async function autoSaveUnit(key, lvl, unit, data) {
+            const unitData = {
+                data: JSON.parse(JSON.stringify(data)),
+                level: lvl,
+                unit: unit,
+                timestamp: new Date().toLocaleTimeString('es-ES'),
+                savedAt: Date.now()
+            };
+            // Actualizar memoria local primero (para UI responsiva)
+            savedUnits[key] = unitData;
+            updateSavedUnitsUI();
+            // Sincronizar con BD
+            setSyncStatus('syncing');
+            await saveUnitToDB(key, unitData);
+            setSyncStatus('saved');
+        }
+
+        function updateSavedUnitsUI() {
+            const container = document.getElementById('saved-units-container');
+            const keys = Object.keys(savedUnits).sort();
+            
+            if (keys.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-400 italic" id="no-units-msg">No hay unidades guardadas en esta sesión.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            keys.forEach(key => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'inline-flex rounded-lg shadow-sm';
+
+                const btnLoad = document.createElement('button');
+                btnLoad.className = 'px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-l-lg text-sm font-medium hover:bg-indigo-600 hover:text-white transition-colors focus:ring-2 focus:ring-indigo-500 outline-none';
+                btnLoad.textContent = key;
+                btnLoad.onclick = () => loadUnit(key);
+
+                const btnDelete = document.createElement('button');
+                btnDelete.className = 'px-2 py-2 bg-indigo-50 border-y border-r border-indigo-200 text-red-400 rounded-r-lg hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors focus:ring-2 focus:ring-red-500 outline-none';
+                btnDelete.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+                btnDelete.title = `Borrar ${key}`;
+                btnDelete.onclick = () => confirmDeleteUnit(key);
+
+                wrapper.appendChild(btnLoad);
+                wrapper.appendChild(btnDelete);
+                container.appendChild(wrapper);
+            });
+        }
+
+        function confirmDeleteUnit(key) {
+            showModal('Borrar unidad', `¿Estás seguro de que deseas borrar los datos de la unidad "${key}"?`, [
+                { text: 'Cancelar', type: 'secondary' },
+                { text: 'Borrar', type: 'danger', action: () => {
+                    delete savedUnits[key];
+                    updateSavedUnitsUI();
+                    // Sincronizar borrado con Firebase
+                    deleteUnitFromDB(key);
+                }}
+            ]);
+        }
+
+        function confirmDeleteAllUnits() {
+            if (Object.keys(savedUnits).length === 0) {
+                showModal('Borrar', 'No hay unidades guardadas para borrar.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            showModal('Borrar todas las unidades', '¿Estás seguro de que deseas borrar TODAS las unidades guardadas? Esta acción no se puede deshacer.', [
+                { text: 'Cancelar', type: 'secondary' },
+                { text: 'Borrar Todas', type: 'danger', action: () => {
+                    const keys = Object.keys(savedUnits);
+                    keys.forEach(k => {
+                        delete savedUnits[k];
+                        deleteUnitFromDB(k);
+                    });
+                    updateSavedUnitsUI();
+                }}
+            ]);
+        }
+
+        function loadUnit(key) {
+            const unitData = savedUnits[key];
+            if (!unitData) return;
+
+            // Suprimir el evento onGroupChanged mientras cambiamos los selects
+            // programáticamente, para que no borre los archivos cargados.
+            _suppressGroupChange = true;
+            document.getElementById('select-level').value = unitData.level;
+            document.getElementById('select-unit').value = unitData.unit;
+            _suppressGroupChange = false;
+
+            // Normalizar cada estudiante para asegurar que descriptors existe y es un objeto.
+            // Esto es necesario si la unidad se guardó con una versión anterior del código
+            // que no guardaba descriptores, o si Firebase transformó la estructura.
+            currentProcessedData = (unitData.data || []).map(s => normalizeStudent(s));
+            renderTable(currentProcessedData);
+
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('current-group-label').textContent = key;
+            setSyncStatus('saved');
+        }
+
+        // --- ELIMINAR CURSO ACTIVO ---
+        function confirmDeleteActiveCourse() {
+            const lvl = document.getElementById('select-level').value;
+            const unit = document.getElementById('select-unit').value;
+            const key = getUnitKey(lvl, unit);
+
+            const existsInSaved = !!savedUnits[key];
+            let msg = `¿Estás seguro de que deseas eliminar la vista del curso actual "${key}"?`;
+            if (existsInSaved) {
+                msg += ` Esto también eliminará permanentemente la unidad guardada de la memoria de la sesión.`;
+            }
+
+            showModal('Eliminar curso activo', msg, [
+                { text: 'Cancelar', type: 'secondary' },
+                { text: 'Eliminar', type: 'danger', action: () => executeDeleteActiveCourse(key) }
+            ]);
+        }
+
+        function executeDeleteActiveCourse(key) {
+            // Eliminar de los guardados si existía en la lista
+            if (savedUnits[key]) {
+                delete savedUnits[key];
+                updateSavedUnitsUI();
+            }
+
+            // Resetear el estado activo de los datos procesados
+            currentProcessedData = null;
+            
+            // Ocultar secciones de la interfaz
+            document.getElementById('results-section').classList.add('hidden');
+            setSyncStatus('idle');
+            
+            // Vaciar los ficheros cargados
+            clearAllFiles();
+
+            showModal('Curso eliminado', `Se ha eliminado el curso "${key}" y se han restablecido las casillas de archivos.`, [
+                { text: 'Aceptar', type: 'primary' }
+            ]);
+        }
+
+        // ============================================================
+        //  AUTENTICACIÓN Y GESTIÓN DE USUARIOS (Realtime Database)
+        // ============================================================
+        // Modelo: usuarios guardados directamente en la BD bajo
+        //   /expovilladiego/evaluacion_competencial/users/{username}/
+        //       = { passwordHash, passwordSalt, role, createdAt, updatedAt }
+        //
+        // No se usa Firebase Authentication (que requeriría email). En su lugar:
+        //   - Las contraseñas se hashean con PBKDF2 (Web Crypto API, 100.000 iteraciones)
+        //     + salt aleatorio de 16 bytes, ambas en base64.
+        //   - La sesión se persiste en sessionStorage (cierra al cerrar pestaña) con
+        //     el username logueado, para mantener la sesión entre recargas.
+        //
+        // AVISO DE SEGURIDAD: este modelo es razonable para un contexto de centro
+        // educativo, pero NO equivale a Firebase Auth. La BD debe estar protegida
+        // con reglas que impidan la lectura de /users por usuarios no autenticados
+        // (ver README al final del archivo). Si necesitas máxima seguridad, deberás
+        // usar Firebase Auth con email + un Cloud Function que haga de pasarela.
+
+        // Estado de la sesión actual
+        let currentUser = null;       // { username, role, isAdmin }
+        let firebaseReady = false;
+        // Caché local del listado de usuarios (admin)
+        let usersCache = null;
+        // Username que se está editando en el editor (null = crear nuevo)
+        let editingUsername = null;
+
+        // ============================================================
+        //  HASH DE CONTRASEÑAS (PBKDF2 vía Web Crypto API)
+        // ============================================================
+        async function hashPassword(password, saltBase64 = null) {
+            // Generar salt aleatorio de 16 bytes si no se proporciona
+            let salt;
+            if (saltBase64) {
+                // Convertir base64 a Uint8Array
+                const binary = atob(saltBase64);
+                salt = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) salt[i] = binary.charCodeAt(i);
+            } else {
+                salt = crypto.getRandomValues(new Uint8Array(16));
+            }
+
+            // Importar la contraseña como clave
+            const enc = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey(
+                'raw',
+                enc.encode(password),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveBits']
+            );
+
+            // Derivar 256 bits con PBKDF2-SHA256, 100.000 iteraciones
+            const derivedBits = await crypto.subtle.deriveBits(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                256
+            );
+
+            // Convertir salt y hash a base64 para almacenarlos como string en la BD
+            const saltB64 = btoa(String.fromCharCode(...salt));
+            const hashB64 = btoa(String.fromCharCode(...new Uint8Array(derivedBits)));
+            return { salt: saltB64, hash: hashB64 };
+        }
+
+        async function verifyPassword(password, saltBase64, expectedHashBase64) {
+            try {
+                const result = await hashPassword(password, saltBase64);
+                // Comparación constante-time para evitar timing attacks
+                if (result.hash.length !== expectedHashBase64.length) return false;
+                let diff = 0;
+                for (let i = 0; i < result.hash.length; i++) {
+                    diff |= result.hash.charCodeAt(i) ^ expectedHashBase64.charCodeAt(i);
+                }
+                return diff === 0;
+            } catch (err) {
+                console.error('Error al verificar contraseña:', err);
+                return false;
+            }
+        }
+
+        // ============================================================
+        //  SESIÓN (sessionStorage)
+        // ============================================================
+        const SESSION_KEY = 'ev_competencial_user';
+
+        function saveSession(username) {
+            try {
+                sessionStorage.setItem(SESSION_KEY, username);
+            } catch (e) {
+                console.warn('No se pudo guardar la sesión:', e);
+            }
+        }
+
+        function loadSession() {
+            try {
+                return sessionStorage.getItem(SESSION_KEY);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function clearSession() {
+            try {
+                sessionStorage.removeItem(SESSION_KEY);
+            } catch (e) {}
+        }
+
+        // ============================================================
+        //  HELPERS
+        // ============================================================
+        function isCurrentUserAdmin() {
+            return currentUser && currentUser.isAdmin;
+        }
+
+        function showLoginScreen() {
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('user-bar').classList.add('hidden');
+            document.getElementById('user-bar').classList.remove('flex');
+        }
+
+        function showApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('user-bar').classList.remove('hidden');
+            document.getElementById('user-bar').classList.add('flex');
+            document.getElementById('user-display').textContent = currentUser.username;
+            const adminBtn = document.getElementById('btn-user-admin');
+            if (currentUser.isAdmin) {
+                adminBtn.classList.remove('hidden');
+                adminBtn.classList.add('flex');
+            } else {
+                adminBtn.classList.add('hidden');
+                adminBtn.classList.remove('flex');
+            }
+        }
+
+        // ============================================================
+        //  LOGIN / LOGOUT
+        // ============================================================
+        async function handleLogin(event) {
+            event.preventDefault();
+            if (!firebaseReady) {
+                showLoginError('Firebase aún se está cargando. Espera un momento e inténtalo de nuevo.');
+                return;
+            }
+
+            const username = document.getElementById('login-username').value.trim().toLowerCase();
+            const password = document.getElementById('login-password').value;
+            const btnText = document.getElementById('login-btn-text');
+
+            if (!username || !password) {
+                showLoginError('Introduce usuario y contraseña.');
+                return;
+            }
+
+            btnText.textContent = 'Verificando...';
+            document.getElementById('login-error').classList.add('hidden');
+
+            try {
+                const M = window.fbModules;
+                // Leer el usuario desde la BD
+                const snap = await M.get(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users/${username}`));
+
+                if (!snap.exists()) {
+                    // Si el usuario es 'admin' y no existe en la BD, es el primer arranque:
+                    // ofrecer crearlo con la contraseña introducida.
+                    if (window.fbConfig.ADMIN_USERS.includes(username)) {
+                        const crear = confirm(
+                            `No existe el usuario "${username}" en la base de datos.\n\n` +
+                            `Como es el usuario administrador por defecto, ¿deseas crearlo ahora ` +
+                            `con la contraseña que acabas de introducir?\n\n` +
+                            `(Esta operación solo se ofrece la primera vez.)`
+                        );
+                        if (crear) {
+                            const { salt, hash } = await hashPassword(password);
+                            await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users/${username}`), {
+                                passwordHash: hash,
+                                passwordSalt: salt,
+                                role: 'admin',
+                                createdAt: Date.now()
+                            });
+                        } else {
+                            throw { code: 'USER_NOT_FOUND' };
+                        }
+                    } else {
+                        throw { code: 'USER_NOT_FOUND' };
+                    }
+                } else {
+                    // Verificar contraseña
+                    const userData = snap.val();
+                    const ok = await verifyPassword(password, userData.passwordSalt, userData.passwordHash);
+                    if (!ok) throw { code: 'WRONG_PASSWORD' };
+                }
+
+                // Login OK: cargar perfil del usuario
+                // Releer para obtener el rol actualizado (por si acabamos de crearlo)
+                const snap2 = await M.get(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users/${username}`));
+                const userData2 = snap2.val();
+                const role = userData2?.role || (window.fbConfig.ADMIN_USERS.includes(username) ? 'admin' : 'user');
+
+                currentUser = {
+                    username: username,
+                    role: role,
+                    isAdmin: role === 'admin'
+                };
+                saveSession(username);
+                showApp();
+                // Suscribirse a cursos (la suscripción a unidades se hace
+                // automáticamente cuando se reciba el curso activo).
+                await subscribeToCourses();
+
+                // Limpiar campos
+                document.getElementById('login-password').value = '';
+            } catch (err) {
+                console.error('Login error:', err);
+                let msg = 'No se pudo iniciar sesión.';
+                if (err.code === 'USER_NOT_FOUND') {
+                    msg = 'Usuario o contraseña incorrectos.';
+                } else if (err.code === 'WRONG_PASSWORD') {
+                    msg = 'Usuario o contraseña incorrectos.';
+                } else if (err.code === 'PERMISSION_DENIED' || err.message?.includes('Permission denied')) {
+                    msg = 'Permiso denegado. Revisa las reglas de seguridad de la base de datos.';
+                } else if (err.message) {
+                    msg = err.message;
+                }
+                showLoginError(msg);
+            } finally {
+                btnText.textContent = 'Iniciar sesión';
+            }
+        }
+
+        function showLoginError(msg) {
+            const errorDiv = document.getElementById('login-error');
+            errorDiv.textContent = msg;
+            errorDiv.classList.remove('hidden');
+        }
+
+        async function handleLogout() {
+            // Cancelar suscripción en tiempo real a las unidades
+            if (_unitsSubscription) {
+                try { _unitsSubscription(); } catch(e) {}
+                _unitsSubscription = null;
+            }
+            // Cancelar suscripciones a cursos
+            if (_coursesSubscription) { try { _coursesSubscription(); } catch(e) {} _coursesSubscription = null; }
+            if (_activeCourseSubscription) { try { _activeCourseSubscription(); } catch(e) {} _activeCourseSubscription = null; }
+            currentUser = null;
+            currentCourseId = null;
+            coursesCache = {};
+            clearSession();
+            // Limpiar estado local
+            Object.keys(savedUnits).forEach(k => delete savedUnits[k]);
+            currentProcessedData = null;
+            document.getElementById('results-section').classList.add('hidden');
+            setSyncStatus('idle');
+            updateSavedUnitsUI();
+            // Ocultar botón de gestión de cursos por si acaso
+            const btnManage = document.getElementById('btn-manage-courses');
+            if (btnManage) { btnManage.classList.add('hidden'); btnManage.classList.remove('flex'); }
+            showLoginScreen();
+        }
+
+        // Restablecer sesión al cargar la página (si existe en sessionStorage)
+        async function restoreSession() {
+            const username = loadSession();
+            if (!username) {
+                showLoginScreen();
+                return;
+            }
+            try {
+                // Verificar que el usuario sigue existiendo en la BD
+                const M = window.fbModules;
+                const snap = await M.get(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users/${username}`));
+                if (!snap.exists()) {
+                    clearSession();
+                    showLoginScreen();
+                    return;
+                }
+                const userData = snap.val();
+                const role = userData.role || (window.fbConfig.ADMIN_USERS.includes(username) ? 'admin' : 'user');
+                currentUser = {
+                    username: username,
+                    role: role,
+                    isAdmin: role === 'admin'
+                };
+                showApp();
+                // Suscribirse a cursos (la suscripción a unidades se hace
+                // automáticamente cuando se reciba el curso activo).
+                await subscribeToCourses();
+            } catch (err) {
+                console.error('Error al restaurar sesión:', err);
+                clearSession();
+                showLoginScreen();
+            }
+        }
+
+        // ============================================================
+        //  PERSISTENCIA DE UNIDADES EN REALTIME DATABASE
+        // ============================================================
+        // Estructura: /expovilladiego/evaluacion_competencial/data/{username}/{unitKey}
+        //   = { data, level, unit, timestamp, savedAt }
+        // Los datos están aislados por username.
+
+        // Referencia a la suscripción en tiempo real (para poder cancelarla al logout)
+        let _unitsSubscription = null;
+        // Flag para evitar que la suscripción en tiempo real sobrescriba cambios locales
+        // que aún no se han guardado en la BD.
+        let _suppressNextSync = false;
+
+        // Actualiza el indicador visual de sincronización en la UI.
+        // Estados: 'idle' (sin datos), 'syncing' (sincronizando), 'saved' (guardado), 'error' (error)
+        function setSyncStatus(status) {
+            const el = document.getElementById('sync-status');
+            const text = document.getElementById('sync-text');
+            if (!el || !text) return;
+
+            // Reset de clases
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+            el.className = el.className.replace(/bg-(gray|emerald|amber|red)-\d+/g, '').replace(/text-(gray|emerald|amber|red)-\d+/g, '').trim();
+            el.classList.add('flex', 'items-center', 'gap-2', 'text-sm', 'px-3', 'py-2', 'rounded-lg');
+
+            switch (status) {
+                case 'idle':
+                    el.classList.add('hidden');
+                    el.classList.remove('flex');
+                    text.textContent = '';
+                    break;
+                case 'syncing':
+                    el.classList.add('bg-amber-50', 'text-amber-700', 'border', 'border-amber-200');
+                    text.textContent = 'Sincronizando...';
+                    break;
+                case 'saved':
+                    el.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
+                    text.textContent = 'Guardado en la nube';
+                    break;
+                case 'error':
+                    el.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
+                    text.textContent = 'Error de sincronización';
+                    break;
+            }
+        }
+
+        // Carga inicial de unidades desde la BD y se SUSCRIBE a cambios en tiempo real.
+        // Si la BD cambia (desde otra pestaña u otro dispositivo del mismo usuario),
+        // la UI se actualiza automáticamente.
+        // Las unidades se aislan por (username, curso académico).
+        async function loadSavedUnitsFromDB() {
+            if (!currentUser) return;
+            if (!currentCourseId) {
+                // Sin curso activo: limpiar savedUnits y no suscribirse
+                Object.keys(savedUnits).forEach(k => delete savedUnits[k]);
+                updateSavedUnitsUI();
+                return;
+            }
+            try {
+                const M = window.fbModules;
+                // Cancelar suscripción anterior si existe
+                if (_unitsSubscription) {
+                    _unitsSubscription();
+                    _unitsSubscription = null;
+                }
+
+                // Suscripción en tiempo real a /data/{username}/{cursoId}
+                const unitsRef = M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}`);
+                _unitsSubscription = M.onValue(unitsRef, (snap) => {
+                    // Si este evento lo disparó nuestra propia escritura, ignoramos
+                    // la actualización de la UI para no pisar cambios locales recientes.
+                    if (_suppressNextSync) {
+                        _suppressNextSync = false;
+                        return;
+                    }
+
+                    // Reconstruir savedUnits desde la BD
+                    Object.keys(savedUnits).forEach(k => delete savedUnits[k]);
+                    if (snap.exists()) {
+                        const data = snap.val();
+                        for (const key in data) {
+                            if (data[key] && data[key].data) {
+                                savedUnits[key] = data[key];
+                                // Normalizar cada estudiante: asegurar que tiene descriptors
+                                // y objectives como objetos (Firebase a veces convierte
+                                // claves numéricas en arrays o las pierde).
+                                if (Array.isArray(savedUnits[key].data)) {
+                                    savedUnits[key].data = savedUnits[key].data.map(s => normalizeStudent(s));
+                                }
+                            }
+                        }
+                    }
+                    updateSavedUnitsUI();
+
+                    // Si hay datos procesados en pantalla y la unidad activa cambió en la BD,
+                    // refrescar la tabla mostrada.
+                    if (currentProcessedData) {
+                        const lvl = document.getElementById('select-level').value;
+                        const unit = document.getElementById('select-unit').value;
+                        const activeKey = getUnitKey(lvl, unit);
+                        if (savedUnits[activeKey]) {
+                            currentProcessedData = savedUnits[activeKey].data;
+                            renderTable(currentProcessedData);
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Error al suscribirse a unidades de la BD:', err);
+                showModal('Error de sincronización', 'No se pudieron cargar las unidades guardadas desde la base de datos. Los cambios que hagas se mantendrán en memoria pero no se sincronizarán hasta que recargues la página.', [{ text: 'Entendido', type: 'primary' }]);
+            }
+        }
+
+        // Guarda una unidad en la BD. Como hay una suscripción onValue activa,
+        // la propia BD disparará un evento que refresca la UI en todos los
+        // clientes conectados.
+        async function saveUnitToDB(key, unitData) {
+            if (!currentUser || !currentCourseId) {
+                setSyncStatus('error');
+                showModal('Curso no seleccionado', 'No hay un curso académico activo. Pide al administrador que seleccione uno.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            try {
+                const M = window.fbModules;
+                // Marcar que la próxima notificación de onValue la disparó esta
+                // escritura, para evitar un bucle de actualización de UI.
+                _suppressNextSync = true;
+                await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}/${key}`), unitData);
+            } catch (err) {
+                _suppressNextSync = false;
+                console.error('Error al guardar unidad en BD:', err);
+                setSyncStatus('error');
+                showModal('Error al guardar', `No se pudo sincronizar la unidad "${key}" con la base de datos. ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+            }
+        }
+
+        async function deleteUnitFromDB(key) {
+            if (!currentUser || !currentCourseId) return;
+            try {
+                const M = window.fbModules;
+                _suppressNextSync = true;
+                await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}/${key}`));
+            } catch (err) {
+                _suppressNextSync = false;
+                console.error('Error al borrar unidad en BD:', err);
+                showModal('Error al borrar', `No se pudo borrar la unidad "${key}" de la base de datos. ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+            }
+        }
+
+        // ============================================================
+        //  GESTIÓN DE CURSOS ACADÉMICOS (SOLO ADMIN)
+        // ============================================================
+        // Estado global del curso activo (cursoId seleccionado por el admin).
+        // Todos los usuarios ven el mismo curso activo (lo establece el admin).
+        let currentCourseId = null;       // id del curso activo
+        let coursesCache = {};            // {cursoId: {name, createdAt, updatedAt}}
+        let _coursesSubscription = null;  // suscripción a /cursos
+        let _activeCourseSubscription = null;  // suscripción a /activeCourse
+        let editingCourseId = null;       // cursoId que se está editando (null = crear)
+
+        // Rellena el selector de cursos en la UI según el rol del usuario.
+        function applyCoursesToUI() {
+            const select = document.getElementById('select-course');
+            select.innerHTML = '';
+
+            const courseIds = Object.keys(coursesCache).sort((a, b) => {
+                // Ordenar por nombre (los cursos normalmente son "2024-2025" etc.)
+                const na = coursesCache[a]?.name || a;
+                const nb = coursesCache[b]?.name || b;
+                return na.localeCompare(nb);
+            });
+
+            if (courseIds.length === 0) {
+                select.innerHTML = '<option value="">(Sin cursos. Pide al admin que cree uno.)</option>';
+                select.disabled = !isCurrentUserAdmin();
+                return;
+            }
+
+            courseIds.forEach(id => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = coursesCache[id]?.name || id;
+                select.appendChild(opt);
+            });
+
+            // Seleccionar el curso activo. Si currentCourseId es null (todavía no
+            // ha llegado el evento de /activeCourse), seleccionar el primero por defecto
+            // pero SIN cambiar currentCourseId (lo hará el onValue de activeCourse).
+            if (currentCourseId && courseIds.includes(currentCourseId)) {
+                select.value = currentCourseId;
+            } else {
+                select.value = courseIds[0];
+            }
+
+            // El selector solo lo puede cambiar el admin
+            select.disabled = !isCurrentUserAdmin();
+            if (!isCurrentUserAdmin()) {
+                select.title = 'Solo el administrador puede cambiar de curso académico';
+            } else {
+                select.title = 'Selecciona el curso académico activo para todos los usuarios';
+            }
+        }
+
+        // Cuando el admin cambia el selector de curso en la UI.
+        async function onCourseSelected() {
+            if (!isCurrentUserAdmin()) {
+                // Usuario normal: revertir al currentCourseId (no debería poder cambiar)
+                const select = document.getElementById('select-course');
+                if (currentCourseId) select.value = currentCourseId;
+                return;
+            }
+            const newCourseId = document.getElementById('select-course').value;
+            if (!newCourseId || newCourseId === currentCourseId) return;
+
+            // Guardar el curso activo en la BD (se sincroniza con todos los usuarios)
+            try {
+                const M = window.fbModules;
+                await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/activeCourse`), { value: newCourseId, setBy: currentUser.username, setAt: Date.now() });
+            } catch (err) {
+                console.error('Error al cambiar curso activo:', err);
+                showModal('Error', `No se pudo cambiar el curso activo: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+            }
+            // El onValue de activeCourse se encargará de actualizar currentCourseId y recargar unidades.
+        }
+
+        // Suscripción en tiempo real a la lista de cursos y al curso activo.
+        // Se llama tras iniciar sesión.
+        async function subscribeToCourses() {
+            const M = window.fbModules;
+            // Cancelar suscripciones previas
+            if (_coursesSubscription) { try { _coursesSubscription(); } catch(e) {} _coursesSubscription = null; }
+            if (_activeCourseSubscription) { try { _activeCourseSubscription(); } catch(e) {} _activeCourseSubscription = null; }
+
+            // Suscripción a /cursos
+            const cursosRef = M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos`);
+            _coursesSubscription = M.onValue(cursosRef, (snap) => {
+                // Si ya no hay usuario logueado (p.ej. tras logout), ignorar el evento
+                if (!currentUser) return;
+                coursesCache = snap.exists() ? (snap.val() || {}) : {};
+                applyCoursesToUI();
+                // Mostrar/ocultar botón "Gestionar cursos"
+                const btnManage = document.getElementById('btn-manage-courses');
+                if (isCurrentUserAdmin()) {
+                    btnManage.classList.remove('hidden');
+                    btnManage.classList.add('flex');
+                } else {
+                    btnManage.classList.add('hidden');
+                    btnManage.classList.remove('flex');
+                }
+            });
+
+            // Suscripción a /activeCourse
+            const activeRef = M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/activeCourse`);
+            _activeCourseSubscription = M.onValue(activeRef, (snap) => {
+                // Si ya no hay usuario logueado (p.ej. tras logout), ignorar el evento
+                if (!currentUser) return;
+                const newActive = snap.exists() ? (snap.val()?.value || null) : null;
+                if (newActive !== currentCourseId) {
+                    currentCourseId = newActive;
+                    // Actualizar el selector
+                    const select = document.getElementById('select-course');
+                    if (select && currentCourseId) select.value = currentCourseId;
+                    // Recargar unidades del nuevo curso
+                    loadSavedUnitsFromDB();
+                }
+            });
+        }
+
+        // Abre el modal de gestión de cursos (solo admin).
+        async function openCourseManagement() {
+            if (!isCurrentUserAdmin()) {
+                showModal('Acceso denegado', 'Solo el administrador puede gestionar cursos académicos.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            document.getElementById('course-mgmt-modal').classList.remove('hidden');
+            await refreshCoursesList();
+        }
+
+        function closeCourseMgmtModal() {
+            document.getElementById('course-mgmt-modal').classList.add('hidden');
+        }
+
+        async function refreshCoursesList() {
+            const listEl = document.getElementById('course-mgmt-list');
+            listEl.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">Cargando cursos...</td></tr>';
+
+            try {
+                const courseIds = Object.keys(coursesCache).sort((a, b) => {
+                    const na = coursesCache[a]?.name || a;
+                    const nb = coursesCache[b]?.name || b;
+                    return na.localeCompare(nb);
+                });
+
+                if (courseIds.length === 0) {
+                    listEl.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">No hay cursos creados todavía. Pulsa "Añadir curso" para crear el primero.</td></tr>';
+                    return;
+                }
+
+                listEl.innerHTML = courseIds.map(id => {
+                    const name = coursesCache[id]?.name || id;
+                    const isActive = id === currentCourseId;
+                    return `
+                        <tr class="border-t border-gray-200 hover:bg-gray-50">
+                            <td class="px-4 py-3 font-medium text-gray-800">${escapeHTML(name)}</td>
+                            <td class="px-4 py-3">
+                                ${isActive ? '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">Activo</span>' : '<button onclick="setActiveCourse(\'' + escapeHTML(id) + '\')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Activar</button>'}
+                            </td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <button onclick="openCourseEditor('${escapeHTML(id)}')" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-3" title="Editar">Editar</button>
+                                <button onclick="confirmDeleteCourse('${escapeHTML(id)}')" class="text-red-600 hover:text-red-800 text-sm font-medium" title="Eliminar">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Error al listar cursos:', err);
+                listEl.innerHTML = `<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">Error al cargar: ${escapeHTML(err.message || '')}</td></tr>`;
+            }
+        }
+
+        function openCourseEditor(courseId) {
+            editingCourseId = courseId;
+            const titleEl = document.getElementById('course-editor-title');
+            const nameInput = document.getElementById('course-editor-name');
+
+            if (courseId && coursesCache[courseId]) {
+                titleEl.textContent = 'Editar curso';
+                nameInput.value = coursesCache[courseId].name || '';
+                document.getElementById('course-editor-save').textContent = 'Guardar cambios';
+            } else {
+                titleEl.textContent = 'Añadir curso';
+                nameInput.value = '';
+                document.getElementById('course-editor-save').textContent = 'Crear curso';
+                // Sugerir el próximo curso académico basándose en el año actual
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth() + 1;
+                const startYear = month >= 9 ? year : year - 1;
+                nameInput.placeholder = `${startYear}-${startYear + 1}`;
+            }
+
+            document.getElementById('course-editor-modal').classList.remove('hidden');
+            setTimeout(() => nameInput.focus(), 50);
+        }
+
+        function closeCourseEditor() {
+            document.getElementById('course-editor-modal').classList.add('hidden');
+            editingCourseId = null;
+        }
+
+        async function handleCourseEditorSubmit(event) {
+            event.preventDefault();
+            if (!isCurrentUserAdmin()) {
+                showModal('Acceso denegado', 'No tienes permisos para esta acción.', [{ text: 'Cerrar', type: 'danger' }]);
+                return;
+            }
+
+            const nameInput = document.getElementById('course-editor-name');
+            const saveBtn = document.getElementById('course-editor-save');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                showModal('Nombre vacío', 'Debes introducir un nombre para el curso.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Procesando...';
+
+            try {
+                const M = window.fbModules;
+                if (!editingCourseId) {
+                    // Crear nuevo curso: usar push() para generar ID único
+                    const newRef = M.push(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos`));
+                    const newId = newRef.key;
+                    await M.set(newRef, {
+                        name: name,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                    });
+                    // Si es el primer curso, hacerlo activo automáticamente
+                    if (Object.keys(coursesCache).length === 0) {
+                        await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/activeCourse`), { value: newId, setBy: currentUser.username, setAt: Date.now() });
+                    }
+                    showModal('Curso creado', `Se ha creado el curso "${name}".`, [{ text: 'Aceptar', type: 'primary' }]);
+                } else {
+                    // Editar curso existente
+                    await M.update(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos/${editingCourseId}`), {
+                        name: name,
+                        updatedAt: Date.now()
+                    });
+                    showModal('Curso actualizado', `Se ha renombrado el curso a "${name}".`, [{ text: 'Aceptar', type: 'primary' }]);
+                }
+                closeCourseEditor();
+                await refreshCoursesList();
+            } catch (err) {
+                console.error('Error al guardar curso:', err);
+                showModal('Error', `No se pudo guardar el curso: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = editingCourseId ? 'Guardar cambios' : 'Crear curso';
+            }
+        }
+
+        // Activa un curso desde el modal de gestión.
+        async function setActiveCourse(courseId) {
+            if (!isCurrentUserAdmin()) return;
+            try {
+                const M = window.fbModules;
+                await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/activeCourse`), { value: courseId, setBy: currentUser.username, setAt: Date.now() });
+                // La suscripción onValue se encargará de actualizar currentCourseId y la UI
+                showModal('Curso activo cambiado', `Ahora el curso activo es "${coursesCache[courseId]?.name || courseId}". Todos los usuarios verán las unidades de este curso.`, [{ text: 'Aceptar', type: 'primary' }]);
+                await refreshCoursesList();
+            } catch (err) {
+                console.error('Error al activar curso:', err);
+                showModal('Error', `No se pudo activar el curso: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+            }
+        }
+
+        function confirmDeleteCourse(courseId) {
+            if (!isCurrentUserAdmin()) return;
+            const name = coursesCache[courseId]?.name || courseId;
+            if (courseId === currentCourseId) {
+                showModal('No permitido', 'No puedes eliminar el curso que está activo. Activa otro curso primero y luego elimina este.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            showModal(
+                'Eliminar curso',
+                `¿Estás seguro de que deseas eliminar el curso "${name}"?\n\nEsta acción borrará permanentemente:\n• La definición del curso\n• TODAS las unidades guardadas de TODOS los usuarios para este curso\n\nNo se puede deshacer.`,
+                [
+                    { text: 'Cancelar', type: 'secondary' },
+                    { text: 'Eliminar definitivamente', type: 'danger', action: () => executeDeleteCourse(courseId) }
+                ]
+            );
+        }
+
+        async function executeDeleteCourse(courseId) {
+            try {
+                const M = window.fbModules;
+                // 1. Borrar todas las unidades de todos los usuarios para este curso
+                const usersSnap = await M.get(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users`));
+                if (usersSnap.exists()) {
+                    const users = usersSnap.val();
+                    for (const username in users) {
+                        try {
+                            await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${username}/${courseId}`));
+                        } catch (e) {
+                            console.warn(`No se pudieron borrar los datos de ${username} para el curso ${courseId}:`, e);
+                        }
+                    }
+                }
+                // 2. Borrar la definición del curso
+                await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos/${courseId}`));
+                showModal('Curso eliminado', `Se ha eliminado el curso y todas sus unidades asociadas.`, [{ text: 'Entendido', type: 'primary' }]);
+                await refreshCoursesList();
+            } catch (err) {
+                console.error('Error al eliminar curso:', err);
+                showModal('Error', `No se pudo eliminar: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+            }
+        }
+
+        // ============================================================
+        //  GESTIÓN DE USUARIOS (SOLO ADMIN)
+        // ============================================================
+        async function openUserManagement() {
+            if (!isCurrentUserAdmin()) {
+                showModal('Acceso denegado', 'Solo el administrador puede gestionar usuarios.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            document.getElementById('user-mgmt-modal').classList.remove('hidden');
+            await refreshUsersList();
+        }
+
+        function closeUserMgmtModal() {
+            document.getElementById('user-mgmt-modal').classList.add('hidden');
+        }
+
+        async function refreshUsersList() {
+            const listEl = document.getElementById('user-mgmt-list');
+            listEl.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">Cargando usuarios...</td></tr>';
+
+            try {
+                const M = window.fbModules;
+                const snap = await M.get(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users`));
+                const users = snap.exists() ? snap.val() : {};
+                usersCache = users;
+
+                // Convertir a array
+                const rows = Object.entries(users).map(([uname, info]) => ({
+                    username: uname,
+                    role: info.role || 'user',
+                    createdAt: info.createdAt || 0
+                }));
+
+                // Asegurar que el admin actual esté presente (caso primer arranque sin entry en BD)
+                if (currentUser && currentUser.isAdmin) {
+                    const yaIncluido = rows.some(r => r.username === currentUser.username);
+                    if (!yaIncluido) {
+                        rows.unshift({ username: currentUser.username, role: 'admin', createdAt: 0 });
+                    }
+                }
+
+                if (rows.length === 0) {
+                    listEl.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-400">No hay usuarios registrados todavía.</td></tr>';
+                    return;
+                }
+
+                // Ordenar: admins primero, luego por username
+                rows.sort((a, b) => {
+                    if (a.role === 'admin' && b.role !== 'admin') return -1;
+                    if (a.role !== 'admin' && b.role === 'admin') return 1;
+                    return a.username.localeCompare(b.username);
+                });
+
+                listEl.innerHTML = rows.map(u => {
+                    const isSelf = currentUser && u.username === currentUser.username;
+                    const isProtected = window.fbConfig.ADMIN_USERS.includes(u.username);
+                    const editOnclick = `openUserEditor('${escapeHTML(u.username)}')`;
+                    const deleteOnclick = `confirmDeleteUser('${escapeHTML(u.username)}')`;
+                    return `
+                        <tr class="border-t border-gray-200 hover:bg-gray-50">
+                            <td class="px-4 py-3 font-medium text-gray-800">
+                                ${escapeHTML(u.username)}
+                                ${isSelf ? '<span class="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">tú</span>' : ''}
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="text-xs font-semibold px-2 py-1 rounded-full ${u.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}">${u.role === 'admin' ? 'Admin' : 'Usuario'}</span>
+                            </td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <button onclick="${editOnclick}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-3" title="Editar">Editar</button>
+                                ${isProtected ? '<span class="text-gray-300 text-sm" title="Usuario protegido, no se puede eliminar">—</span>' : `<button onclick="${deleteOnclick}" class="text-red-600 hover:text-red-800 text-sm font-medium" title="Eliminar">Eliminar</button>`}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Error al listar usuarios:', err);
+                listEl.innerHTML = `<tr><td colspan="3" class="px-4 py-8 text-center text-red-500">Error al cargar: ${escapeHTML(err.message || '')}</td></tr>`;
+            }
+        }
+
+        function openUserEditor(username) {
+            editingUsername = username;
+            const titleEl = document.getElementById('user-editor-title');
+            const usernameInput = document.getElementById('user-editor-username');
+            const roleSelect = document.getElementById('user-editor-role');
+            const pass1 = document.getElementById('user-editor-pass1');
+            const pass2 = document.getElementById('user-editor-pass2');
+            const pass1Label = document.getElementById('user-editor-pass1-label');
+            const passError = document.getElementById('user-editor-pass-error');
+            const saveBtn = document.getElementById('user-editor-save');
+
+            passError.classList.add('hidden');
+            pass1.value = '';
+            pass2.value = '';
+
+            if (username && usersCache && usersCache[username]) {
+                const u = usersCache[username];
+                titleEl.textContent = 'Editar usuario';
+                usernameInput.value = u.username || username;
+                usernameInput.readOnly = true;
+                roleSelect.value = u.role || 'user';
+                pass1Label.textContent = 'Nueva contraseña (dejar vacío para no cambiar)';
+                pass1.required = false;
+                pass2.required = false;
+                saveBtn.textContent = 'Guardar cambios';
+            } else {
+                titleEl.textContent = 'Añadir usuario';
+                usernameInput.value = '';
+                usernameInput.readOnly = false;
+                roleSelect.value = 'user';
+                pass1Label.textContent = 'Contraseña';
+                pass1.required = true;
+                pass2.required = true;
+                saveBtn.textContent = 'Crear usuario';
+            }
+
+            document.getElementById('user-editor-modal').classList.remove('hidden');
+        }
+
+        function closeUserEditor() {
+            document.getElementById('user-editor-modal').classList.add('hidden');
+            editingUsername = null;
+        }
+
+        async function handleUserEditorSubmit(event) {
+            event.preventDefault();
+            if (!isCurrentUserAdmin()) {
+                showModal('Acceso denegado', 'No tienes permisos para esta acción.', [{ text: 'Cerrar', type: 'danger' }]);
+                return;
+            }
+
+            const usernameInput = document.getElementById('user-editor-username');
+            const roleSelect = document.getElementById('user-editor-role');
+            const pass1 = document.getElementById('user-editor-pass1');
+            const pass2 = document.getElementById('user-editor-pass2');
+            const passError = document.getElementById('user-editor-pass-error');
+            const saveBtn = document.getElementById('user-editor-save');
+
+            const username = usernameInput.value.trim().toLowerCase();
+            const role = roleSelect.value;
+            const p1 = pass1.value;
+            const p2 = pass2.value;
+
+            // Validaciones de contraseña
+            const needsPassword = !editingUsername;
+            if (needsPassword) {
+                if (!p1 || p1.length < 6) {
+                    showPasswordError('La contraseña debe tener al menos 6 caracteres.');
+                    return;
+                }
+                if (p1 !== p2) {
+                    showPasswordError('Las contraseñas no coinciden. Introdúcelas de nuevo.');
+                    return;
+                }
+            } else if (p1) {
+                if (p1.length < 6) {
+                    showPasswordError('La contraseña debe tener al menos 6 caracteres.');
+                    return;
+                }
+                if (p1 !== p2) {
+                    showPasswordError('Las contraseñas no coinciden. Introdúcelas de nuevo.');
+                    return;
+                }
+            }
+
+            passError.classList.add('hidden');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Procesando...';
+
+            try {
+                const M = window.fbModules;
+                if (!editingUsername) {
+                    // === CREAR NUEVO USUARIO ===
+                    // Verificar que no exista ya
+                    const existingSnap = await M.get(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users/${username}`));
+                    if (existingSnap.exists()) {
+                        throw { code: 'USERNAME_TAKEN', message: `Ya existe el usuario "${username}". Elige otro nombre.` };
+                    }
+                    const { salt, hash } = await hashPassword(p1);
+                    await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users/${username}`), {
+                        passwordHash: hash,
+                        passwordSalt: salt,
+                        role: role,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now()
+                    });
+                    showModal('Usuario creado', `Se ha creado el usuario "${username}" con rol ${role === 'admin' ? 'administrador' : 'normal'}.`, [{ text: 'Aceptar', type: 'primary' }]);
+                } else {
+                    // === EDITAR USUARIO EXISTENTE ===
+                    const updates = { role: role, updatedAt: Date.now() };
+                    if (p1) {
+                        // Cambiar contraseña
+                        const { salt, hash } = await hashPassword(p1);
+                        updates.passwordHash = hash;
+                        updates.passwordSalt = salt;
+                    }
+                    await M.update(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users/${editingUsername}`), updates);
+                    const msg = p1
+                        ? `Se ha actualizado el usuario "${editingUsername}": rol = ${role === 'admin' ? 'administrador' : 'normal'}, contraseña cambiada.`
+                        : `Se ha actualizado el rol de "${editingUsername}" a ${role === 'admin' ? 'administrador' : 'normal'}.`;
+                    showModal('Usuario actualizado', msg, [{ text: 'Aceptar', type: 'primary' }]);
+                }
+
+                closeUserEditor();
+                await refreshUsersList();
+            } catch (err) {
+                console.error('Error al guardar usuario:', err);
+                let msg = err.message || 'Error desconocido';
+                if (err.code === 'USERNAME_TAKEN') msg = err.message;
+                else if (err.code === 'PERMISSION_DENIED' || err.message?.includes('Permission denied')) {
+                    msg = 'Permiso denegado. Solo el administrador puede gestionar usuarios. Revisa las reglas de seguridad de la BD.';
+                }
+                showModal('Error', msg, [{ text: 'Cerrar', type: 'danger' }]);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = editingUsername ? 'Guardar cambios' : 'Crear usuario';
+            }
+        }
+
+        function showPasswordError(msg) {
+            const passError = document.getElementById('user-editor-pass-error');
+            passError.textContent = msg;
+            passError.classList.remove('hidden');
+        }
+
+        function confirmDeleteUser(username) {
+            if (!isCurrentUserAdmin()) return;
+            if (username === currentUser.username) {
+                showModal('No permitido', 'No puedes eliminar tu propia cuenta mientras estás conectado.', [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+            showModal(
+                'Eliminar usuario',
+                `¿Estás seguro de que deseas eliminar al usuario "${username}"?\n\nEsta acción borrará permanentemente:\n• Su cuenta (username, contraseña hasheada, rol)\n• Sus unidades guardadas en la base de datos\n\nNo se puede deshacer.`,
+                [
+                    { text: 'Cancelar', type: 'secondary' },
+                    { text: 'Eliminar definitivamente', type: 'danger', action: () => executeDeleteUser(username) }
+                ]
+            );
+        }
+
+        async function executeDeleteUser(username) {
+            try {
+                const M = window.fbModules;
+                // Borrar el usuario
+                await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/users/${username}`));
+                // Borrar también sus datos (unidades guardadas)
+                try {
+                    await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${username}`));
+                } catch (e) {
+                    // Si falla el borrado de datos (por ejemplo, no tenía), continuar
+                    console.warn('No se pudieron borrar los datos del usuario:', e);
+                }
+                showModal('Usuario eliminado', `Se ha eliminado el usuario "${username}" y todos sus datos.`, [{ text: 'Entendido', type: 'primary' }]);
+                await refreshUsersList();
+            } catch (err) {
+                console.error('Error al eliminar usuario:', err);
+                showModal('Error', `No se pudo eliminar: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+            }
+        }
+
+        // ============================================================
+        //  INICIALIZACIÓN
+        // ============================================================
+        function initFirebase() {
+            // El script module ya cargó Firebase y lo expuso en window.fbDb
+            firebaseReady = true;
+            // Restaurar sesión si existe (sessionStorage), o mostrar login
+            restoreSession();
+        }
+
+        // Inicializar
+        window.onload = () => {
+            initUploadGrid();
+        };
+
+        // Esperar a que Firebase esté listo (evento 'firebase-ready' disparado por el script module)
+        if (!window.fbDb) {
+            window.addEventListener('firebase-ready', initFirebase, { once: true });
+        } else {
+            initFirebase();
+        }
+
+    </script>
+
+    <!-- ============================================================ -->
+    <!--  PWA: Registro del Service Worker                            -->
+    <!-- ============================================================ -->
+    <!-- Se registra después de cargar todo, para no bloquear el render.
+         El SW permite que la app funcione offline (excepto las llamadas a
+         Firebase, que requieren conexión). -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('[PWA] Service Worker registrado correctamente. Scope:', registration.scope);
+
+                        // Comprobar si hay una nueva versión cada vez que se carga
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Hay una nueva versión disponible
+                                    console.log('[PWA] Nueva versión disponible. Recarga para activarla.');
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.warn('[PWA] Error al registrar el Service Worker:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
