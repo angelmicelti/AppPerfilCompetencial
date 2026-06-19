@@ -1947,6 +1947,20 @@
             thead.appendChild(tr2);
         }
 
+        // Colores de fondo para celdas de descriptores NO relacionados (versión tenue).
+        // Esto extiende visualmente el color de la cabecera de cada competencia a las
+        // celdas vacías, creando bloques visuales que facilitan la lectura de la tabla.
+        const DESCRIPTOR_BG_COLORS = {
+            'CCL1': '#eff6ff', 'CCL2': '#eff6ff', 'CCL3': '#eff6ff', 'CCL4': '#eff6ff', 'CCL5': '#eff6ff',
+            'CP1': '#faf5ff', 'CP2': '#faf5ff', 'CP3': '#faf5ff',
+            'STEM1': '#f0fdf4', 'STEM2': '#f0fdf4', 'STEM3': '#f0fdf4', 'STEM4': '#f0fdf4', 'STEM5': '#f0fdf4',
+            'CD1': '#ecfeff', 'CD2': '#ecfeff', 'CD3': '#ecfeff', 'CD4': '#ecfeff', 'CD5': '#ecfeff',
+            'CPSAA1': '#fff7ed', 'CPSAA2': '#fff7ed', 'CPSAA3': '#fff7ed', 'CPSAA4': '#fff7ed', 'CPSAA5': '#fff7ed',
+            'CC1': '#fefce8', 'CC2': '#fefce8', 'CC3': '#fefce8', 'CC4': '#fefce8',
+            'CE1': '#fdf2f8', 'CE2': '#fdf2f8', 'CE3': '#fdf2f8',
+            'CCEC1': '#fef2f2', 'CCEC2': '#fef2f2', 'CCEC3': '#fef2f2', 'CCEC4': '#fef2f2'
+        };
+
         // Renderiza la tabla de objetivos para el alumno seleccionado.
         // Filas: O.1 a O.12 (12 objetivos de etapa).
         // Columnas: 34 descriptores operativos + 1 final "Conseguido".
@@ -2008,12 +2022,15 @@
                 // Celdas por descriptor
                 ALL_DESCRIPTORS.forEach(desc => {
                     const isRelated = relatedDescs.includes(desc);
+                    const bgColor = DESCRIPTOR_BG_COLORS[desc] || '#f9fafb';
                     if (!isRelated) {
-                        html += `<td class="px-1 py-2 border-b border-gray-100 text-center text-gray-300">·</td>`;
+                        // Sin relación: celda con color tenue de la competencia (sin texto)
+                        html += `<td class="px-1 py-2 border-b border-gray-100" style="background-color: ${bgColor};"></td>`;
                     } else {
                         const grade = student.descriptors?.[desc];
                         if (grade === null || grade === undefined) {
-                            html += `<td class="px-1 py-2 border-b border-gray-100 text-center text-gray-400 bg-gray-100" title="${escapeHTML(desc)}: sin datos">-</td>`;
+                            // Relacionado pero sin datos: color tenue + guion
+                            html += `<td class="px-1 py-2 border-b border-gray-100 text-center text-gray-400" style="background-color: ${bgColor};" title="${escapeHTML(desc)}: sin datos">-</td>`;
                         } else if (grade < 5) {
                             html += `<td class="px-1 py-2 border-b border-gray-100 text-center font-bold text-white" style="background-color: #dc2626;" title="${escapeHTML(desc)}: ${formatNumber(grade)} (suspenso, contribuye a suspender O.${objNum})">${formatNumber(grade)}</td>`;
                         } else {
@@ -2040,8 +2057,9 @@
             let totalHtml = `<td class="px-3 py-3 border-t-2 border-emerald-300 text-gray-800 sticky left-0 bg-emerald-50">TOTAL</td>`;
             ALL_DESCRIPTORS.forEach(desc => {
                 const grade = student.descriptors?.[desc];
+                const bgColor = DESCRIPTOR_BG_COLORS[desc] || '#f9fafb';
                 if (grade === null || grade === undefined) {
-                    totalHtml += `<td class="px-1 py-3 border-t-2 border-emerald-300 text-center text-gray-400">-</td>`;
+                    totalHtml += `<td class="px-1 py-3 border-t-2 border-emerald-300 text-center text-gray-400" style="background-color: ${bgColor};">-</td>`;
                 } else if (grade >= 5) {
                     totalHtml += `<td class="px-1 py-3 border-t-2 border-emerald-300 text-center text-white" style="background-color: #16a34a;">${formatNumber(grade)}</td>`;
                 } else {
@@ -2202,7 +2220,11 @@
             // Normalizar cada estudiante para asegurar que descriptors existe y es un objeto.
             // Esto es necesario si la unidad se guardó con una versión anterior del código
             // que no guardaba descriptores, o si Firebase transformó la estructura.
-            currentProcessedData = (unitData.data || []).map(s => normalizeStudent(s));
+            // Reordenar por nombre con localeCompare para que los apellidos con tilde
+            // (Ávila, Écija, etc.) aparezcan en su posición alfabética correcta.
+            currentProcessedData = (unitData.data || [])
+                .map(s => normalizeStudent(s))
+                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
             renderTable(currentProcessedData);
 
             document.getElementById('results-section').classList.remove('hidden');
@@ -2657,7 +2679,10 @@
                         const unit = document.getElementById('select-unit').value;
                         const activeKey = getUnitKey(lvl, unit);
                         if (savedUnits[activeKey]) {
-                            currentProcessedData = savedUnits[activeKey].data;
+                            // Reordenar por nombre con localeCompare al cargar desde la BD
+                            currentProcessedData = (savedUnits[activeKey].data || [])
+                                .map(s => normalizeStudent(s))
+                                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' }));
                             renderTable(currentProcessedData);
                         }
                     }
