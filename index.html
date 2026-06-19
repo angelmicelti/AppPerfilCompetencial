@@ -47,11 +47,7 @@
             update,
             remove,
             onValue,
-            child,
-            push,
-            query,
-            orderByChild,
-            equalTo
+            push
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
         // Configuración Firebase (proyecto: gestionreducciones)
@@ -90,8 +86,7 @@
         // Exponer globalmente para que el script clásico (no-module) pueda usarlos
         window.fbDb = db;
         window.fbModules = {
-            ref, get, set, update, remove, onValue, child, push,
-            query, orderByChild, equalTo
+            ref, get, set, update, remove, onValue, push
         };
         window.fbConfig = {
             DB_ROOT,
@@ -364,8 +359,9 @@
                                         <th scope="col" class="px-6 py-4 font-bold rounded-tl-lg bg-gray-100 border-b border-gray-200 min-w-[200px]">Alumno/a</th>
                                         <!-- Competencias generadas dinámicamente -->
                                         <script>
-                                            const COMPETENCES = ['CCL', 'CP', 'STEM', 'CD', 'CPSAA', 'CC', 'CE', 'CCEC'];
-                                            COMPETENCES.forEach(c => document.write(`<th scope="col" class="px-4 py-4 text-center font-bold border-b border-gray-200 bg-gray-100">${c}</th>`));
+                                            // Constante local: este script se ejecuta durante el parsing,
+                                            // antes de que COMPETENCES_ORDER (definida más abajo) exista.
+                                            ['CCL', 'CP', 'STEM', 'CD', 'CPSAA', 'CC', 'CE', 'CCEC'].forEach(c => document.write(`<th scope="col" class="px-4 py-4 text-center font-bold border-b border-gray-200 bg-gray-100">${c}</th>`));
                                         </script>
                                         <th scope="col" class="px-6 py-4 text-center font-extrabold bg-indigo-50 text-indigo-900 border-b border-indigo-100 rounded-tr-lg">Media Global</th>
                                     </tr>
@@ -664,14 +660,6 @@
         // Lista lineal de los 34 descriptores en orden
         const ALL_DESCRIPTORS = Object.values(DESCRIPTORS_BY_COMP).flat();
 
-        // Competencia a la que pertenece cada descriptor (para cabeceras)
-        function descriptorToComp(desc) {
-            for (const comp of COMPETENCES_ORDER) {
-                if (DESCRIPTORS_BY_COMP[comp].includes(desc)) return comp;
-            }
-            return null;
-        }
-
         // Matriz objetivo → descriptores relacionados (basada en el BOJA Anexo VI).
         // Cada objetivo se relaciona con los siguientes descriptores operativos:
         const OBJECTIVE_DESCRIPTORS = {
@@ -705,20 +693,7 @@
             12: 'Apreciar la creación artística y comprender el lenguaje de las distintas manifestaciones artísticas, utilizando diversos medios de expresión y representación.'
         };
 
-        // Mapeo inverso obsoleto (mantenido por compatibilidad con código viejo)
-        // No se usa en la nueva tabla de objetivos-descriptores.
-        const COMPETENCE_OBJECTIVES = {
-            'CCL':   [1, 3, 5, 6, 7, 8, 10, 11],
-            'CP':    [1, 4, 8, 9, 10],
-            'STEM':  [2, 5, 6, 7, 8, 11],
-            'CD':    [1, 2, 5, 7, 11],
-            'CPSAA': [1, 2, 3, 4, 5, 6, 7, 8, 11],
-            'CC':    [1, 3, 4, 8, 10, 11],
-            'CE':    [2, 4, 5, 7, 11],
-            'CCEC':  [3, 4, 8, 10, 11, 12]
-        };
-
-        // Para cada objetivo, devuelve la lista de descriptores relacionados (nueva API).
+        // Para cada objetivo, devuelve la lista de descriptores relacionados.
         function getObjectiveDescriptors(objNum) {
             return OBJECTIVE_DESCRIPTORS[objNum] || [];
         }
@@ -890,14 +865,9 @@
         // cargados (ya seleccionados en los inputs), se limpian automáticamente.
         // Esto evita que se procesen en un grupo datos que correspondían a otro.
         //
-        // Flag para suprimir la limpieza cuando el cambio se hace programáticamente
-        // (por ejemplo, al cargar una unidad guardada con loadUnit).
-        let _suppressGroupChange = false;
-
+        // Nota: asignar select.value programáticamente (p.ej. en loadUnit) NO
+        // dispara el evento 'change', así que no hace falta un flag de supresión.
         function onGroupChanged() {
-            // Si el cambio fue programático (loadUnit), no hacer nada.
-            if (_suppressGroupChange) return;
-
             // Comprobar si hay algún archivo cargado en los inputs
             let anyFile = false;
             for (const comp of COMPETENCES_ORDER) {
@@ -971,20 +941,28 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     if (typeof importedData !== 'object' || importedData === null) throw new Error("Formato inválido");
-                    
+
                     let added = 0;
+                    const importPromises = [];
                     for (const key in importedData) {
                         if (Object.keys(savedUnits).length >= 8 && !savedUnits[key]) {
                             continue;
                         }
-                        savedUnits[key] = importedData[key];
+                        // Normalizar los estudiantes importados (pueden venir sin descriptors)
+                        const unitData = importedData[key];
+                        if (unitData && Array.isArray(unitData.data)) {
+                            unitData.data = unitData.data.map(s => normalizeStudent(s));
+                        }
+                        savedUnits[key] = unitData;
                         added++;
+                        // Sincronizar con Firebase (sin await: en paralelo)
+                        importPromises.push(saveUnitToDB(key, unitData));
                     }
-                    
+
                     updateSavedUnitsUI();
-                    
+
                     if (added > 0) {
-                        showModal('Importación exitosa', `Se han importado/actualizado ${added} unidades correctamente.`, [{ text: 'Aceptar', type: 'emerald' }]);
+                        showModal('Importación exitosa', `Se han importado/actualizado ${added} unidades correctamente. Se están sincronizando con la base de datos.`, [{ text: 'Aceptar', type: 'emerald' }]);
                     } else {
                         showModal('Límite alcanzado', 'No se han podido importar unidades. El sistema ya contiene el máximo de 8 unidades.', [{ text: 'Entendido', type: 'primary' }]);
                     }
@@ -1000,7 +978,7 @@
         // Abre el modal de selección múltiple. Las unidades elegidas se imprimen
         // vía window.print() → "Guardar como PDF" del navegador.
         function openMultiPrintModal() {
-            const keys = Object.keys(savedUnits).sort();
+            const keys = Object.keys(savedUnits).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
             if (keys.length === 0) {
                 showModal('Exportar PDF', 'No hay unidades guardadas que se puedan exportar a PDF.', [{ text: 'Entendido', type: 'primary' }]);
                 return;
@@ -1358,7 +1336,7 @@
                     }
                 }
 
-                const finalData = Array.from(allStudents).sort().map(student => {
+                const finalData = Array.from(allStudents).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })).map(student => {
                     const data = { name: student, competences: {}, descriptors: {}, global: 0 };
                     let sum = 0;
                     let count = 0;
@@ -1414,8 +1392,9 @@
                 savedUnits[key] = unitData;
                 updateSavedUnitsUI();
                 setSyncStatus('syncing');
-                await saveUnitToDB(key, unitData);
-                setSyncStatus('saved');
+                const saved = await saveUnitToDB(key, unitData);
+                if (saved) setSyncStatus('saved');
+                // Si saved es false, saveUnitToDB ya habrá puesto setSyncStatus('error')
 
             } catch (error) {
                 console.error(error);
@@ -1451,7 +1430,7 @@
         }
 
         function formatNumber(num) {
-            if (num === null || num === undefined) return '-';
+            if (num === null || num === undefined || isNaN(num)) return '-';
             return num.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
@@ -1464,7 +1443,7 @@
                 const tr = document.createElement('tr');
                 tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
                 
-                let html = `<td class="px-6 py-3 border-b border-gray-200 font-medium text-gray-900 sticky left-0 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">${student.name}</td>`;
+                let html = `<td class="px-6 py-3 border-b border-gray-200 font-medium text-gray-900 sticky left-0 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">${escapeHTML(student.name)}</td>`;
                 
                 COMPETENCES_ORDER.forEach(comp => {
                     const grade = student.competences[comp];
@@ -1746,15 +1725,11 @@
         //   2. No tener 'descriptors' si la unidad se guardó con una versión anterior
         function normalizeStudent(s) {
             if (!s || typeof s !== 'object') return s;
-            // Asegurar que descriptors es un objeto (no array)
-            if (!s.descriptors || typeof s.descriptors !== 'object' || Array.isArray(s.descriptors)) {
-                s.descriptors = {};
-            }
-            // Si descriptors es un array (Firebase convierte {0:.., 1:..} a [.., ..]),
-            // reconstruirlo como objeto usando ALL_DESCRIPTORS como guía.
-            // Esto NO debería pasar con la serialización actual (claves son strings tipo 'CCL1'),
-            // pero lo dejamos por seguridad.
+
+            // Descriptors: Firebase puede devolver un array si las claves eran numéricas,
+            // o undefined si la unidad se guardó con versión antigua.
             if (Array.isArray(s.descriptors)) {
+                // Reconstruir como objeto usando ALL_DESCRIPTORS como guía
                 const arr = s.descriptors;
                 s.descriptors = {};
                 for (let i = 0; i < arr.length && i < ALL_DESCRIPTORS.length; i++) {
@@ -1762,7 +1737,10 @@
                         s.descriptors[ALL_DESCRIPTORS[i]] = arr[i];
                     }
                 }
+            } else if (!s.descriptors || typeof s.descriptors !== 'object') {
+                s.descriptors = {};
             }
+
             // Asegurar que objectives es un objeto
             if (!s.objectives || typeof s.objectives !== 'object' || Array.isArray(s.objectives)) {
                 s.objectives = {};
@@ -1774,28 +1752,9 @@
             return s;
         }
 
-        // Guarda una unidad en memoria Y en la BD en tiempo real.
-        // No pide confirmación: si la unidad ya existe, se sobrescribe.
-        async function autoSaveUnit(key, lvl, unit, data) {
-            const unitData = {
-                data: JSON.parse(JSON.stringify(data)),
-                level: lvl,
-                unit: unit,
-                timestamp: new Date().toLocaleTimeString('es-ES'),
-                savedAt: Date.now()
-            };
-            // Actualizar memoria local primero (para UI responsiva)
-            savedUnits[key] = unitData;
-            updateSavedUnitsUI();
-            // Sincronizar con BD
-            setSyncStatus('syncing');
-            await saveUnitToDB(key, unitData);
-            setSyncStatus('saved');
-        }
-
         function updateSavedUnitsUI() {
             const container = document.getElementById('saved-units-container');
-            const keys = Object.keys(savedUnits).sort();
+            const keys = Object.keys(savedUnits).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
             
             if (keys.length === 0) {
                 container.innerHTML = '<p class="text-sm text-gray-400 italic" id="no-units-msg">No hay unidades guardadas en esta sesión.</p>';
@@ -1858,12 +1817,11 @@
             const unitData = savedUnits[key];
             if (!unitData) return;
 
-            // Suprimir el evento onGroupChanged mientras cambiamos los selects
-            // programáticamente, para que no borre los archivos cargados.
-            _suppressGroupChange = true;
+            // Cambiar los selects programáticamente. Esto NO dispara el evento
+            // 'change' (solo lo dispara la interacción del usuario), así que
+            // onGroupChanged no se ejecutará y los archivos no se borrarán.
             document.getElementById('select-level').value = unitData.level;
             document.getElementById('select-unit').value = unitData.unit;
-            _suppressGroupChange = false;
 
             // Normalizar cada estudiante para asegurar que descriptors existe y es un objeto.
             // Esto es necesario si la unidad se guardó con una versión anterior del código
@@ -1988,6 +1946,8 @@
 
         async function verifyPassword(password, saltBase64, expectedHashBase64) {
             try {
+                // Null checks: si el registro de usuario no tiene hash/salt (datos corruptos o legacy), fallar seguro.
+                if (!saltBase64 || !expectedHashBase64) return false;
                 const result = await hashPassword(password, saltBase64);
                 // Comparación constante-time para evitar timing attacks
                 if (result.hash.length !== expectedHashBase64.length) return false;
@@ -2241,28 +2201,26 @@
             const text = document.getElementById('sync-text');
             if (!el || !text) return;
 
-            // Reset de clases
-            el.classList.remove('hidden');
-            el.classList.add('flex');
-            el.className = el.className.replace(/bg-(gray|emerald|amber|red)-\d+/g, '').replace(/text-(gray|emerald|amber|red)-\d+/g, '').trim();
-            el.classList.add('flex', 'items-center', 'gap-2', 'text-sm', 'px-3', 'py-2', 'rounded-lg');
+            // Reset completo de clases: reconstruimos desde cero para evitar
+            // acumulación de clases de estados previos (bug de border-*-200).
+            // Clases base que siempre están presentes (excepto en 'idle').
+            el.className = 'flex items-center gap-2 text-sm px-3 py-2 rounded-lg border';
 
             switch (status) {
                 case 'idle':
-                    el.classList.add('hidden');
-                    el.classList.remove('flex');
+                    el.className = 'hidden';
                     text.textContent = '';
                     break;
                 case 'syncing':
-                    el.classList.add('bg-amber-50', 'text-amber-700', 'border', 'border-amber-200');
+                    el.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200');
                     text.textContent = 'Sincronizando...';
                     break;
                 case 'saved':
-                    el.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
+                    el.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
                     text.textContent = 'Guardado en la nube';
                     break;
                 case 'error':
-                    el.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200');
+                    el.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
                     text.textContent = 'Error de sincronización';
                     break;
             }
@@ -2341,7 +2299,7 @@
             if (!currentUser || !currentCourseId) {
                 setSyncStatus('error');
                 showModal('Curso no seleccionado', 'No hay un curso académico activo. Pide al administrador que seleccione uno.', [{ text: 'Entendido', type: 'primary' }]);
-                return;
+                return false;
             }
             try {
                 const M = window.fbModules;
@@ -2349,24 +2307,29 @@
                 // escritura, para evitar un bucle de actualización de UI.
                 _suppressNextSync = true;
                 await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}/${key}`), unitData);
+                return true;
             } catch (err) {
                 _suppressNextSync = false;
                 console.error('Error al guardar unidad en BD:', err);
                 setSyncStatus('error');
                 showModal('Error al guardar', `No se pudo sincronizar la unidad "${key}" con la base de datos. ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+                return false;
             }
         }
 
         async function deleteUnitFromDB(key) {
-            if (!currentUser || !currentCourseId) return;
+            if (!currentUser || !currentCourseId) return false;
             try {
                 const M = window.fbModules;
                 _suppressNextSync = true;
                 await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}/${key}`));
+                return true;
             } catch (err) {
                 _suppressNextSync = false;
                 console.error('Error al borrar unidad en BD:', err);
+                setSyncStatus('error');
                 showModal('Error al borrar', `No se pudo borrar la unidad "${key}" de la base de datos. ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+                return false;
             }
         }
 
@@ -2390,7 +2353,7 @@
                 // Ordenar por nombre (los cursos normalmente son "2024-2025" etc.)
                 const na = coursesCache[a]?.name || a;
                 const nb = coursesCache[b]?.name || b;
-                return na.localeCompare(nb);
+                return na.localeCompare(nb, 'es', { sensitivity: 'base' });
             });
 
             if (courseIds.length === 0) {
@@ -2511,7 +2474,7 @@
                 const courseIds = Object.keys(coursesCache).sort((a, b) => {
                     const na = coursesCache[a]?.name || a;
                     const nb = coursesCache[b]?.name || b;
-                    return na.localeCompare(nb);
+                    return na.localeCompare(nb, 'es', { sensitivity: 'base' });
                 });
 
                 if (courseIds.length === 0) {
@@ -2732,7 +2695,7 @@
                 rows.sort((a, b) => {
                     if (a.role === 'admin' && b.role !== 'admin') return -1;
                     if (a.role !== 'admin' && b.role === 'admin') return 1;
-                    return a.username.localeCompare(b.username);
+                    return a.username.localeCompare(b.username, 'es', { sensitivity: 'base' });
                 });
 
                 listEl.innerHTML = rows.map(u => {
@@ -2958,11 +2921,26 @@
             initUploadGrid();
         };
 
-        // Esperar a que Firebase esté listo (evento 'firebase-ready' disparado por el script module)
-        if (!window.fbDb) {
-            window.addEventListener('firebase-ready', initFirebase, { once: true });
-        } else {
+        // Esperar a que Firebase esté listo (evento 'firebase-ready' disparado por el script module).
+        // Si el CDN de Firebase no carga (red caída, firewall, etc.), el evento nunca se dispara
+        // y la app quedaría colgada en estado 'app-booting' (pantalla índigo en blanco).
+        // Por eso añadimos un timeout de 15s: si Firebase no carga, mostramos el login
+        // con un mensaje de error para que el usuario sepa qué pasa.
+        let _firebaseReadyTimer = null;
+        if (window.fbDb) {
             initFirebase();
+        } else {
+            window.addEventListener('firebase-ready', () => {
+                if (_firebaseReadyTimer) clearTimeout(_firebaseReadyTimer);
+                initFirebase();
+            }, { once: true });
+            _firebaseReadyTimer = setTimeout(() => {
+                if (!window.fbDb) {
+                    console.error('[Boot] Firebase no cargó tras 15s. Mostrando login con error.');
+                    showLoginScreen();
+                    showLoginError('No se pudo conectar con el servidor (Firebase). Revisa tu conexión a internet y recarga la página.');
+                }
+            }, 15000);
         }
 
     </script>
