@@ -480,6 +480,12 @@
     <!--  PANTALLA DE LOGIN                                            -->
     <!-- ============================================================ -->
     <div id="login-screen" class="hidden fixed inset-0 z-[100] bg-gradient-to-br from-indigo-700 via-indigo-800 to-purple-900 flex items-center justify-center p-4">
+        <!-- Botón de tutorial en la esquina superior derecha -->
+        <button onclick="openTutorialModal()" class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white rounded-full p-3 transition-colors flex items-center gap-2 text-sm font-medium backdrop-blur-sm" title="¿Cómo funciona la app?">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span class="hidden sm:inline">¿Cómo funciona?</span>
+        </button>
+
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-2xl mb-4">
@@ -782,6 +788,91 @@
                     <button onclick="closePdfModal()" class="px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors">Cancelar</button>
                     <button onclick="generateMultiplePrint()" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">Generar PDF</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  MODAL TUTORIAL / AYUDA                                       -->
+    <!-- ============================================================ -->
+    <div id="tutorial-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70]">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-start p-6 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="inline-flex items-center justify-center w-10 h-10 bg-indigo-100 rounded-xl">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800">¿Cómo funciona la app?</h3>
+                </div>
+                <button onclick="closeTutorialModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+                <!-- Paso 1 -->
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Iniciar sesión</h4>
+                        <p class="text-sm text-gray-600 mt-1">Introduce tu usuario y contraseña. Si es la primera vez, escribe <code class="bg-gray-100 px-1 rounded">admin</code> y la contraseña que elijas: la app te ofrecerá crear el usuario administrador automáticamente.</p>
+                    </div>
+                </div>
+
+                <!-- Paso 2 -->
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Seleccionar curso y grupo</h4>
+                        <p class="text-sm text-gray-600 mt-1">Elige el <strong>curso académico</strong> (solo el administrador puede cambiarlo o crear nuevos), el <strong>nivel</strong> (1º a 4º ESO) y la <strong>unidad</strong> (A o B) en el panel "1. Seleccionar Grupo".</p>
+                    </div>
+                </div>
+
+                <!-- Paso 3 -->
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Cargar archivos de calificaciones</h4>
+                        <p class="text-sm text-gray-600 mt-1">Despliega el panel "2. Cargar Archivos" y sube los 8 archivos <code class="bg-gray-100 px-1 rounded">.xls</code> de las competencias (CCL, CP, STEM, CD, CPSAA, CC, CE, CCEC). Puedes usar el botón <strong>"Seleccionar Varios Archivos"</strong> para cargarlos todos a la vez.</p>
+                    </div>
+                </div>
+
+                <!-- Paso 4 -->
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">4</div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Procesar calificaciones</h4>
+                        <p class="text-sm text-gray-600 mt-1">Pulsa <strong>"Procesar Calificaciones"</strong>. La app leerá las notas de cada descriptor operativo, calculará las medias por competencia y mostrará la tabla del <strong>Perfil Competencial</strong>. Los datos se guardan automáticamente en la nube.</p>
+                    </div>
+                </div>
+
+                <!-- Paso 5 -->
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">5</div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Consultar Objetivos de Etapa (4º ESO)</h4>
+                        <p class="text-sm text-gray-600 mt-1">En 4º de ESO aparece automáticamente una tabla con los <strong>12 objetivos de etapa</strong> y los <strong>34 descriptores operativos</strong>. Las celdas en <span class="text-green-600 font-semibold">verde</span> indican descriptor aprobado, las en <span class="text-red-600 font-semibold">rojo</span> suspenso. Un objetivo se consigue aprobando al menos la mitad de sus descriptores. Si el alumno tiene 6 o más objetivos, aparecerá el rótulo <span class="text-green-600 font-bold">★ TITULA ★</span>.</p>
+                    </div>
+                </div>
+
+                <!-- Paso 6 -->
+                <div class="flex gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">6</div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Exportar a PDF</h4>
+                        <p class="text-sm text-gray-600 mt-1">Pulsa <strong>"Exportar PDF"</strong> para generar un documento con la tabla de competencias. Se abrirá el diálogo de impresión del navegador; elige "Guardar como PDF" como destino.</p>
+                    </div>
+                </div>
+
+                <!-- Nota adicional -->
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800">
+                    <p class="flex items-start gap-2">
+                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Los datos se sincronizan automáticamente con la base de datos. Si cambias de grupo, los archivos cargados se borran para evitar mezclar datos.</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-200 flex justify-end">
+                <button onclick="closeTutorialModal()" class="px-6 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">Entendido</button>
             </div>
         </div>
     </div>
@@ -2523,6 +2614,17 @@
             const errorDiv = document.getElementById('login-error');
             errorDiv.textContent = msg;
             errorDiv.classList.remove('hidden');
+        }
+
+        // ============================================================
+        //  MODAL TUTORIAL
+        // ============================================================
+        function openTutorialModal() {
+            document.getElementById('tutorial-modal').classList.remove('hidden');
+        }
+
+        function closeTutorialModal() {
+            document.getElementById('tutorial-modal').classList.add('hidden');
         }
 
         async function handleLogout() {
