@@ -5,7 +5,7 @@
 //     con fallback a caché si no hay conexión
 //   - Las llamadas a Firebase van siempre a la red (no se cachean)
 
-const CACHE_VERSION = 'v1.0.9';
+const CACHE_VERSION = 'v1.1.0';
 const CACHE_NAME = 'perfil-competencial-' + CACHE_VERSION;
 
 // Recursos estáticos propios (se cachean al instalar)
@@ -30,19 +30,28 @@ const CDN_ASSETS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js'
 ];
 
-// === Instalación: precachear recursos estáticos ===
+// === Instalación: precachear recursos ===
+// Si algún recurso falla, NO se rompe la instalación. El SW se instala
+// igualmente y los recursos se cachean bajo demanda en el fetch.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // Cachear recursos estáticos propios (si fallan, no rompe la instalación)
-      const staticPromises = STATIC_ASSETS.map((url) =>
-        cache.add(url).catch((err) => console.warn('[SW] No se pudo cachear', url, err))
-      );
-      // Cachear recursos CDN (si fallan, no rompe la instalación)
-      const cdnPromises = CDN_ASSETS.map((url) =>
-        cache.add(url).catch((err) => console.warn('[SW] No se pudo cachear CDN', url, err))
-      );
-      return Promise.all([...staticPromises, ...cdnPromises]);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // Intentar cachear recursos estáticos propios
+      for (const url of STATIC_ASSETS) {
+        try {
+          await cache.add(url);
+        } catch (err) {
+          console.warn('[SW] No se pudo precachear', url, err.message);
+        }
+      }
+      // Intentar cachear recursos CDN (no es obligatorio para instalar)
+      for (const url of CDN_ASSETS) {
+        try {
+          await cache.add(url);
+        } catch (err) {
+          console.warn('[SW] No se pudo precachear CDN', url, err.message);
+        }
+      }
     })
   );
   self.skipWaiting();
