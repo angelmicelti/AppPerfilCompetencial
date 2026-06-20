@@ -520,6 +520,7 @@
             <div class="flex items-center gap-3">
                 <svg class="w-8 h-8 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                 <h1 class="text-xl font-bold tracking-tight">Perfil Competencial del Alumnado</h1>
+                <h2 id="nav-course-name" class="text-xl font-bold tracking-tight text-indigo-200 hidden"></h2>
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-sm font-medium text-indigo-200 hidden sm:block">
@@ -529,13 +530,13 @@
                 <div id="user-bar" class="hidden flex items-center gap-3 text-sm">
                     <span class="text-indigo-100">Conectado:</span>
                     <span id="user-display" class="font-semibold text-white bg-indigo-800 px-3 py-1 rounded-full"></span>
-                    <button onclick="openUserManagement()" id="btn-user-admin" class="hidden bg-amber-500 hover:bg-amber-600 text-white font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5" title="Gestionar usuarios">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        Usuarios
+                    <button onclick="openTutorialModal()" class="bg-indigo-800 hover:bg-indigo-900 text-white font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5" title="Ayuda: ¿Cómo funciona la app?">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="hidden sm:inline">Ayuda</span>
                     </button>
                     <button onclick="handleLogout()" class="bg-indigo-800 hover:bg-indigo-900 text-white font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5" title="Cerrar sesión">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        Salir
+                        <span class="hidden sm:inline">Salir</span>
                     </button>
                 </div>
             </div>
@@ -546,9 +547,9 @@
         
         <!-- Controles de Configuración y Unidades Guardadas -->
         <div class="flex flex-col md:flex-row gap-6 mb-8">
-            <!-- Selección de Curso Académico, Nivel y Unidad -->
+            <!-- Gestión: curso académico y usuarios -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex-1">
-                <h2 class="text-lg font-semibold mb-4 text-gray-700">1. Seleccionar Grupo</h2>
+                <h2 class="text-lg font-semibold mb-4 text-gray-700">1. Gestión</h2>
 
                 <!-- Curso académico (solo admin puede cambiarlo/gestionarlo) -->
                 <div class="mb-4">
@@ -564,23 +565,14 @@
                     </select>
                 </div>
 
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Nivel</label>
-                        <select id="select-level" onchange="onGroupChanged()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors">
-                            <option value="1">1º ESO</option>
-                            <option value="2">2º ESO</option>
-                            <option value="3">3º ESO</option>
-                            <option value="4">4º ESO</option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-600 mb-1">Unidad</label>
-                        <select id="select-unit" onchange="onGroupChanged()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors">
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                        </select>
-                    </div>
+                <!-- Gestión de usuarios (solo admin) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Usuarios</label>
+                    <button onclick="openUserManagement()" id="btn-user-admin" class="hidden w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 border border-amber-200" title="Gestionar usuarios (solo admin)">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        Gestionar usuarios
+                    </button>
+                    <p id="user-admin-hint" class="text-xs text-gray-400 mt-1 hidden">Solo el administrador puede gestionar usuarios.</p>
                 </div>
             </div>
 
@@ -630,6 +622,26 @@
 
             <!-- Contenido plegable -->
             <div id="upload-section-content" class="px-6 pb-6">
+                <!-- Selección de Nivel y Unidad (movidos desde la sección de Gestión) -->
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Nivel</label>
+                        <select id="select-level" onchange="onGroupChanged()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors">
+                            <option value="1">1º ESO</option>
+                            <option value="2">2º ESO</option>
+                            <option value="3">3º ESO</option>
+                            <option value="4">4º ESO</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Unidad</label>
+                        <select id="select-unit" onchange="onGroupChanged()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="flex justify-end mb-4">
                     <button id="btn-clear-files" onclick="clearAllFiles()" class="text-sm text-red-600 hover:text-red-800 transition-colors whitespace-nowrap">Limpiar archivos</button>
                 </div>
@@ -821,8 +833,8 @@
                 <div class="flex gap-3">
                     <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">2</div>
                     <div>
-                        <h4 class="font-semibold text-gray-800">Seleccionar curso y grupo</h4>
-                        <p class="text-sm text-gray-600 mt-1">Elige el <strong>curso académico</strong> (solo el administrador puede cambiarlo o crear nuevos), el <strong>nivel</strong> (1º a 4º ESO) y la <strong>unidad</strong> (A o B) en el panel "1. Seleccionar Grupo".</p>
+                        <h4 class="font-semibold text-gray-800">Gestión del curso y usuarios</h4>
+                        <p class="text-sm text-gray-600 mt-1">En el panel "1. Gestión", el administrador puede seleccionar el <strong>curso académico</strong>, gestionar cursos (crear, finalizar, eliminar) y gestionar <strong>usuarios</strong> (crear, editar, eliminar). Los usuarios normales solo pueden ver el curso activo.</p>
                     </div>
                 </div>
 
@@ -830,8 +842,8 @@
                 <div class="flex gap-3">
                     <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">3</div>
                     <div>
-                        <h4 class="font-semibold text-gray-800">Cargar archivos de calificaciones</h4>
-                        <p class="text-sm text-gray-600 mt-1">Despliega el panel "2. Cargar Archivos" y sube los 8 archivos <code class="bg-gray-100 px-1 rounded">.xls</code> de las competencias (CCL, CP, STEM, CD, CPSAA, CC, CE, CCEC). Puedes usar el botón <strong>"Seleccionar Varios Archivos"</strong> para cargarlos todos a la vez.</p>
+                        <h4 class="font-semibold text-gray-800">Seleccionar grupo y cargar archivos</h4>
+                        <p class="text-sm text-gray-600 mt-1">Despliega el panel "2. Cargar Archivos". Primero selecciona el <strong>nivel</strong> (1º a 4º ESO) y la <strong>unidad</strong> (A o B). Luego sube los 8 archivos <code class="bg-gray-100 px-1 rounded">.xls</code> de las competencias (CCL, CP, STEM, CD, CPSAA, CC, CE, CCEC). Puedes usar el botón <strong>"Seleccionar Varios Archivos"</strong> para cargarlos todos a la vez.</p>
                     </div>
                 </div>
 
@@ -2535,12 +2547,15 @@
             // Mostrar/ocultar elementos según rol
             const isAdmin = currentUser.isAdmin;
             const adminBtn = document.getElementById('btn-user-admin');
+            const adminHint = document.getElementById('user-admin-hint');
             if (isAdmin) {
                 adminBtn.classList.remove('hidden');
                 adminBtn.classList.add('flex');
+                if (adminHint) adminHint.classList.add('hidden');
             } else {
                 adminBtn.classList.add('hidden');
                 adminBtn.classList.remove('flex');
+                if (adminHint) adminHint.classList.remove('hidden');
             }
 
             // === PERMISOS DE USUARIO NORMAL (no admin) ===
@@ -3094,6 +3109,19 @@
                 select.title = 'Solo el administrador puede cambiar de curso académico';
             } else {
                 select.title = 'Selecciona el curso académico activo para todos los usuarios';
+            }
+
+            // Actualizar el nombre del curso en el navbar (debajo del título)
+            const navCourseName = document.getElementById('nav-course-name');
+            if (navCourseName) {
+                if (currentCourseId && coursesCache[currentCourseId]) {
+                    const name = coursesCache[currentCourseId].name || currentCourseId;
+                    const finished = isCourseFinished(currentCourseId);
+                    navCourseName.textContent = finished ? `${name} (Finalizado)` : name;
+                    navCourseName.classList.remove('hidden');
+                } else {
+                    navCourseName.classList.add('hidden');
+                }
             }
         }
 
