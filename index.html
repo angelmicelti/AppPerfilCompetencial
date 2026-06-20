@@ -3352,34 +3352,71 @@
     </script>
 
     <!-- ============================================================ -->
-    <!--  PWA: Registro del Service Worker                            -->
+    <!--  PWA: Registro del Service Worker + Instalación               -->
     <!-- ============================================================ -->
-    <!-- Se registra después de cargar todo, para no bloquear el render.
-         El SW permite que la app funcione offline (excepto las llamadas a
-         Firebase, que requieren conexión). -->
     <script>
+        // Variable global para el evento de instalación
+        let deferredInstallPrompt = null;
+
+        // 1. Registrar el Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
                     .then((registration) => {
-                        console.log('[PWA] Service Worker registrado correctamente. Scope:', registration.scope);
-
-                        // Comprobar si hay una nueva versión cada vez que se carga
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // Hay una nueva versión disponible
-                                    console.log('[PWA] Nueva versión disponible. Recarga para activarla.');
-                                }
-                            });
-                        });
+                        console.log('[PWA] Service Worker registrado. Scope:', registration.scope);
                     })
                     .catch((error) => {
                         console.warn('[PWA] Error al registrar el Service Worker:', error);
                     });
             });
         }
+
+        // 2. Capturar el evento beforeinstallprompt para mostrar un botón de instalación
+        //    Chrome en Android no siempre muestra automáticamente el prompt de instalación.
+        //    Aquí lo capturamos y mostramos un botón personalizado.
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevenir el prompt automático
+            e.preventDefault();
+            // Guardar el evento para poder dispararlo luego
+            deferredInstallPrompt = e;
+            console.log('[PWA] App lista para instalar. Mostrando botón.');
+
+            // Mostrar botón de instalación en el navbar
+            const navDiv = document.querySelector('nav .max-w-7xl');
+            if (navDiv) {
+                const installBtn = document.createElement('button');
+                installBtn.id = 'install-app-btn';
+                installBtn.className = 'bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors border border-emerald-400';
+                installBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Instalar app';
+                installBtn.onclick = () => {
+                    if (deferredInstallPrompt) {
+                        deferredInstallPrompt.prompt();
+                        deferredInstallPrompt.userChoice.then((choice) => {
+                            if (choice.outcome === 'accepted') {
+                                console.log('[PWA] Usuario aceptó instalar la app');
+                            } else {
+                                console.log('[PWA] Usuario rechazó instalar la app');
+                            }
+                            deferredInstallPrompt = null;
+                            installBtn.remove();
+                        });
+                    }
+                };
+                // Insertar en el navbar, al lado de los botones de usuario
+                const userBar = document.getElementById('user-bar');
+                if (userBar) {
+                    userBar.insertBefore(installBtn, userBar.firstChild);
+                }
+            }
+        });
+
+        // 3. Si la app ya está instalada (standalone), ocultar el botón
+        window.addEventListener('appinstalled', () => {
+            console.log('[PWA] App instalada correctamente');
+            const btn = document.getElementById('install-app-btn');
+            if (btn) btn.remove();
+            deferredInstallPrompt = null;
+        });
     </script>
 </body>
 </html>
