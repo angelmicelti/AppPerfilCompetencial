@@ -2772,8 +2772,12 @@
                     _unitsSubscription = null;
                 }
 
-                // Suscripción en tiempo real a /data/{username}/{cursoId}
-                const unitsRef = M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}`);
+                // Suscripción en tiempo real a /data/{cursoId}
+                // Los datos se guardan bajo el usuario 'admin' y todos los usuarios
+                // los consultan desde ahí. Así el admin carga los archivos y todos
+                // los profesores pueden verlos en tiempo real.
+                const dataUser = 'admin';
+                const unitsRef = M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${dataUser}/${currentCourseId}`);
                 _unitsSubscription = M.onValue(unitsRef, (snap) => {
                     // Si este evento lo disparó nuestra propia escritura, ignoramos
                     // la actualización de la UI para no pisar cambios locales recientes.
@@ -2832,10 +2836,9 @@
             }
             try {
                 const M = window.fbModules;
-                // Marcar que la próxima notificación de onValue la disparó esta
-                // escritura, para evitar un bucle de actualización de UI.
                 _suppressNextSync = true;
-                await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}/${key}`), unitData);
+                // Los datos se guardan bajo 'admin' para que todos los usuarios los vean
+                await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/admin/${currentCourseId}/${key}`), unitData);
                 return true;
             } catch (err) {
                 _suppressNextSync = false;
@@ -2851,7 +2854,7 @@
             try {
                 const M = window.fbModules;
                 _suppressNextSync = true;
-                await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}/${key}`));
+                await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/admin/${currentCourseId}/${key}`));
                 return true;
             } catch (err) {
                 _suppressNextSync = false;
