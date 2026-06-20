@@ -1,7 +1,7 @@
 {
-  "name": "Evaluación Competencial ESO - IES Virgen de Villadiego",
+  "name": "Perfil Competencial ESO - IES Virgen de Villadiego",
   "short_name": "Perfil Competencial",
-  "description": "Aplicación para la gestión y evaluación competencial del alumnado de ESO según la LOMLOE. Permite procesar calificaciones por descriptor operativo, calcular objetivos de etapa y determinar la titulación.",
+  "description": "Aplicación para la evaluación competencial del alumnado de ESO según la LOMLOE. Permite procesar calificaciones por descriptor operativo, calcular la consecución de los objetivos de la etapa y determinar la titulación.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
