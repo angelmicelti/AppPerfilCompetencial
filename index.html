@@ -1367,6 +1367,7 @@
 
         function importJSON(event) {
             if (!requireAdmin()) { event.target.value = ''; return; }
+            if (!requireEditableCourse()) { event.target.value = ''; return; }
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1725,6 +1726,8 @@
 
         async function processFiles() {
             if (!requireAdmin()) return;
+            // No se puede procesar en un curso finalizado
+            if (!requireEditableCourse()) return;
             // Verificar que hay un curso académico activo antes de procesar.
             // Las unidades se guardan en la BD aisladas por curso; sin curso activo
             // no se puede sincronizar.
@@ -2284,6 +2287,7 @@
 
         function confirmDeleteUnit(key) {
             if (!requireAdmin()) return;
+            if (!requireEditableCourse()) return;
             showModal('Borrar unidad', `¿Estás seguro de que deseas borrar los datos de la unidad "${key}"?`, [
                 { text: 'Cancelar', type: 'secondary' },
                 { text: 'Borrar', type: 'danger', action: () => {
@@ -2297,6 +2301,7 @@
 
         function confirmDeleteAllUnits() {
             if (!requireAdmin()) return;
+            if (!requireEditableCourse()) return;
             if (Object.keys(savedUnits).length === 0) {
                 showModal('Borrar', 'No hay unidades guardadas para borrar.', [{ text: 'Entendido', type: 'primary' }]);
                 return;
@@ -2342,6 +2347,7 @@
         // --- ELIMINAR CURSO ACTIVO ---
         function confirmDeleteActiveCourse() {
             if (!requireAdmin()) return;
+            if (!requireEditableCourse()) return;
             const lvl = document.getElementById('select-level').value;
             const unit = document.getElementById('select-unit').value;
             const key = getUnitKey(lvl, unit);
@@ -2917,10 +2923,133 @@
         // Estado global del curso activo (cursoId seleccionado por el admin).
         // Todos los usuarios ven el mismo curso activo (lo establece el admin).
         let currentCourseId = null;       // id del curso activo
-        let coursesCache = {};            // {cursoId: {name, createdAt, updatedAt}}
+        let coursesCache = {};            // {cursoId: {name, createdAt, updatedAt, finalizado}}
         let _coursesSubscription = null;  // suscripción a /cursos
         let _activeCourseSubscription = null;  // suscripción a /activeCourse
         let editingCourseId = null;       // cursoId que se está editando (null = crear)
+
+        // ============================================================
+        //  LÓGICA DE FINALIZACIÓN DE CURSOS
+        // ============================================================
+        // Un curso se considera finalizado si:
+        //   1. Está marcado explícitamente como finalizado en la BD (por el admin), O
+        //   2. Ha pasado el 30 de junio del año de finalización del curso.
+        //
+        // El año de finalización se extrae del nombre del curso. Si el curso se llama
+        // "2024-2025", el año de finalización es 2025. La fecha límite es el 30 de
+        // junio de 2025. A partir del 1 de julio de 2025, el curso se finaliza
+        // automáticamente.
+        //
+        // REGLAS:
+        //   - Un curso finalizado NO puede ser modificado (procesar, borrar unidades, etc.)
+        //   - Un curso finalizado NO puede ser borrado.
+        //   - El admin puede marcar/desmarcar un curso como finalizado manualmente,
+        //     PERO solo si ya se ha alcanzado el 30 de junio del año de finalización.
+        //     Es decir: no se puede finalizar un curso antes de tiempo.
+
+        // Extrae el año de finalización del nombre del curso.
+        // Ej: "2024-2025" → 2025, "2025-2026" → 2026.
+        // Si no se puede extraer, devuelve null.
+        function getCourseEndYear(courseName) {
+            if (!courseName) return null;
+            // Buscar un patrón de tipo "YYYY-YYYY" o "YYYY/YYYY"
+            const match = courseName.match(/(\d{4})\s*[-/]\s*(\d{4})/);
+            if (match) return parseInt(match[2], 10);
+            // Si solo hay un año de 4 dígitos, usarlo
+            const singleYear = courseName.match(/\b(20\d{2})\b/);
+            if (singleYear) return parseInt(singleYear[1], 10);
+            return null;
+        }
+
+        // Comprueba si ya se ha alcanzado el 30 de junio del año de finalización.
+        // Devuelve true si la fecha actual es posterior o igual al 30 de junio.
+        function hasReachedEndDate(courseName) {
+            const endYear = getCourseEndYear(courseName);
+            if (!endYear) return false;
+            // 30 de junio del año de finalización, a las 23:59:59
+            const endDate = new Date(endYear, 5, 30, 23, 59, 59); // mes 5 = junio (0-indexed)
+            return new Date() >= endDate;
+        }
+
+        // Comprueba si un curso está finalizado (marcado en BD o auto-finalizado por fecha).
+        function isCourseFinished(courseId) {
+            const course = coursesCache[courseId];
+            if (!course) return false;
+            // Si está marcado explícitamente como finalizado en la BD
+            if (course.finalizado === true) return true;
+            // Auto-finalización: si ha pasado el 30 de junio del año de finalización
+            if (hasReachedEndDate(course.name)) {
+                // Marcarlo en la BD si no lo está ya (lo hace el onValue de cursos)
+                // pero la función solo consulta, no escribe.
+                return true;
+            }
+            return false;
+        }
+
+        // Comprueba si el curso ACTIVO está finalizado.
+        function isCurrentCourseFinished() {
+            return currentCourseId ? isCourseFinished(currentCourseId) : false;
+        }
+
+        // Verifica si se puede editar el curso activo. Si está finalizado, muestra
+        // un mensaje y devuelve false.
+        function requireEditableCourse() {
+            if (isCurrentCourseFinished()) {
+                const name = coursesCache[currentCourseId]?.name || currentCourseId;
+                showModal(
+                    'Curso finalizado',
+                    `El curso "${name}" está finalizado. No se pueden modificar sus datos.\n\nLos cursos se finalizan automáticamente al reaching el 30 de junio del año de finalización, o pueden ser marcados manualmente por el administrador.`,
+                    [{ text: 'Entendido', type: 'primary' }]
+                );
+                return false;
+            }
+            return true;
+        }
+
+        // Marca/desmarca un curso como finalizado (solo admin, con validación de fecha).
+        async function toggleCourseFinished(courseId) {
+            if (!isCurrentUserAdmin()) return;
+            const course = coursesCache[courseId];
+            if (!course) return;
+            const name = course.name || courseId;
+            const currentlyFinished = course.finalizado === true;
+
+            if (currentlyFinished) {
+                // Quitar la finalización
+                try {
+                    const M = window.fbModules;
+                    await M.update(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos/${courseId}`), {
+                        finalizado: false,
+                        updatedAt: Date.now()
+                    });
+                    showModal('Curso reactivado', `El curso "${name}" ya no está finalizado. Se pueden modificar los datos.`, [{ text: 'Aceptar', type: 'primary' }]);
+                } catch (err) {
+                    showModal('Error', `No se pudo reactivar el curso: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+                }
+            } else {
+                // Marcar como finalizado: validar que se ha alcanzado el 30 de junio
+                if (!hasReachedEndDate(name)) {
+                    const endYear = getCourseEndYear(name);
+                    showModal(
+                        'No se puede finalizar',
+                        `No se puede finalizar el curso "${name}" porque aún no se ha alcanzado el 30 de junio${endYear ? ' de ' + endYear : ''}.\n\nLos cursos solo se pueden finalizar a partir del 30 de junio del año en el que terminan.`,
+                        [{ text: 'Entendido', type: 'primary' }]
+                    );
+                    return;
+                }
+                try {
+                    const M = window.fbModules;
+                    await M.update(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos/${courseId}`), {
+                        finalizado: true,
+                        updatedAt: Date.now()
+                    });
+                    showModal('Curso finalizado', `El curso "${name}" ha sido marcado como finalizado. Los datos quedan protegidos contra modificaciones.`, [{ text: 'Aceptar', type: 'primary' }]);
+                } catch (err) {
+                    showModal('Error', `No se pudo finalizar el curso: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
+                }
+            }
+            await refreshCoursesList();
+        }
 
         // Rellena el selector de cursos en la UI según el rol del usuario.
         function applyCoursesToUI() {
@@ -2943,7 +3072,10 @@
             courseIds.forEach(id => {
                 const opt = document.createElement('option');
                 opt.value = id;
-                opt.textContent = coursesCache[id]?.name || id;
+                const course = coursesCache[id];
+                const name = course?.name || id;
+                const finished = isCourseFinished(id);
+                opt.textContent = finished ? `${name}  —  FINALIZADO` : name;
                 select.appendChild(opt);
             });
 
@@ -3001,6 +3133,25 @@
                 // Si ya no hay usuario logueado (p.ej. tras logout), ignorar el evento
                 if (!currentUser) return;
                 coursesCache = snap.exists() ? (snap.val() || {}) : {};
+
+                // Auto-finalización: si algún curso ha pasado el 30 de junio pero no
+                // está marcado como finalizado en la BD, marcarlo automáticamente.
+                // Esto lo hace cualquier cliente que detecte la condición; es idempotente.
+                for (const cid in coursesCache) {
+                    const course = coursesCache[cid];
+                    if (course && course.finalizado !== true && hasReachedEndDate(course.name)) {
+                        // Marcar en la BD (sin await: fire-and-forget)
+                        M.update(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos/${cid}`), {
+                            finalizado: true,
+                            autoFinalizado: true,
+                            updatedAt: Date.now()
+                        }).catch(e => console.warn('[Auto-finalizar] Error al marcar curso', cid, e));
+                        // Actualizar también en caché local para reflejarlo inmediatamente
+                        course.finalizado = true;
+                        course.autoFinalizado = true;
+                    }
+                }
+
                 applyCoursesToUI();
                 // Mostrar/ocultar botón "Gestionar cursos"
                 const btnManage = document.getElementById('btn-manage-courses');
@@ -3063,15 +3214,38 @@
                 listEl.innerHTML = courseIds.map(id => {
                     const name = coursesCache[id]?.name || id;
                     const isActive = id === currentCourseId;
+                    const finished = isCourseFinished(id);
+                    const finishedBadge = finished
+                        ? '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-gray-200 text-gray-700">Finalizado</span>'
+                        : '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Activo</span>';
+
+                    // Botón de finalizar/reactivar (solo admin)
+                    let finishBtn = '';
+                    if (isCurrentUserAdmin()) {
+                        if (finished) {
+                            finishBtn = `<button onclick="toggleCourseFinished('${escapeHTML(id)}')" class="text-xs text-amber-600 hover:text-amber-800 font-medium ml-2" title="Reactivar curso">Reactivar</button>`;
+                        } else if (hasReachedEndDate(name)) {
+                            finishBtn = `<button onclick="toggleCourseFinished('${escapeHTML(id)}')" class="text-xs text-red-600 hover:text-red-800 font-medium ml-2" title="Finalizar curso">Finalizar</button>`;
+                        }
+                    }
+
+                    // Botón de eliminar: oculto si el curso está finalizado
+                    let deleteBtn = '';
+                    if (!finished) {
+                        deleteBtn = `<button onclick="confirmDeleteCourse('${escapeHTML(id)}')" class="text-red-600 hover:text-red-800 text-sm font-medium" title="Eliminar">Eliminar</button>`;
+                    }
+
                     return `
-                        <tr class="border-t border-gray-200 hover:bg-gray-50">
+                        <tr class="border-t border-gray-200 hover:bg-gray-50 ${finished ? 'bg-gray-50' : ''}">
                             <td class="px-4 py-3 font-medium text-gray-800">${escapeHTML(name)}</td>
                             <td class="px-4 py-3">
-                                ${isActive ? '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">Activo</span>' : '<button onclick="setActiveCourse(\'' + escapeHTML(id) + '\')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Activar</button>'}
+                                ${isActive ? '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 mr-2">Activo</span>' : '<button onclick="setActiveCourse(\'' + escapeHTML(id) + '\')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium mr-2">Activar</button>'}
+                                ${finishedBadge}
+                                ${finishBtn}
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <button onclick="openCourseEditor('${escapeHTML(id)}')" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-3" title="Editar">Editar</button>
-                                <button onclick="confirmDeleteCourse('${escapeHTML(id)}')" class="text-red-600 hover:text-red-800 text-sm font-medium" title="Eliminar">Eliminar</button>
+                                ${deleteBtn}
                             </td>
                         </tr>
                     `;
@@ -3184,6 +3358,13 @@
         function confirmDeleteCourse(courseId) {
             if (!isCurrentUserAdmin()) return;
             const name = coursesCache[courseId]?.name || courseId;
+
+            // No se puede borrar un curso finalizado
+            if (isCourseFinished(courseId)) {
+                showModal('No se puede borrar', `El curso "${name}" está finalizado y no puede ser eliminado. Los cursos finalizados quedan protegidos para conservar el historial académico.`, [{ text: 'Entendido', type: 'primary' }]);
+                return;
+            }
+
             if (courseId === currentCourseId) {
                 showModal('No permitido', 'No puedes eliminar el curso que está activo. Activa otro curso primero y luego elimina este.', [{ text: 'Entendido', type: 'primary' }]);
                 return;
