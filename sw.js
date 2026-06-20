@@ -5,7 +5,7 @@
 //     con fallback a caché si no hay conexión
 //   - Las llamadas a Firebase van siempre a la red (no se cachean)
 
-const CACHE_VERSION = 'v1.3.0';
+const CACHE_VERSION = 'v1.3.1';
 const CACHE_NAME = 'perfil-competencial-' + CACHE_VERSION;
 
 // Recursos estáticos propios (se cachean al instalar)
