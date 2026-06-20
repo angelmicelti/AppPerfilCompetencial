@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
 
     <!-- PWA: Metadatos -->
-    <title>Perfil Competencial ESO - IES Virgen de Villadiego</title>
+    <title>Evaluación Competencial ESO - IES Virgen de Villadiego</title>
     <meta name="description" content="Gestión y evaluación competencial del alumnado de ESO (LOMLOE) - IES Virgen de Villadiego, Peñaflor (Sevilla)">
     <meta name="theme-color" content="#4f46e5">
     <meta name="color-scheme" content="light">
@@ -211,6 +211,7 @@
             #user-bar span:first-child {
                 display: none; /* "Conectado:" */
             }
+            #btn-user-admin span:last-child,
             #user-bar > button:last-child span:last-child {
                 display: none; /* solo icono */
             }
@@ -241,8 +242,7 @@
            En móvil, reducir el min-width para que quepa más contenido. */
         @media (max-width: 640px) {
             #results-body td:first-child,
-            #results-thead th:first-child,
-            thead th:first-child {
+            #results-thead th:first-child {
                 min-width: 120px !important;
                 max-width: 140px;
                 font-size: 0.75rem;
@@ -312,7 +312,18 @@
             }
         }
 
-        /* (Grid individual de carga eliminado: solo se usa carga masiva) */
+        /* Grid de carga de archivos: en móvil, 2 columnas con tarjetas más pequeñas */
+        @media (max-width: 640px) {
+            #upload-grid {
+                gap: 0.5rem !important;
+            }
+            #upload-grid > div {
+                height: 6rem !important;
+            }
+            #upload-grid label {
+                padding: 0.5rem !important;
+            }
+        }
 
         /* Botones: en móvil, ocupar todo el ancho para mejor táctil */
         @media (max-width: 640px) {
@@ -469,18 +480,12 @@
     <!--  PANTALLA DE LOGIN                                            -->
     <!-- ============================================================ -->
     <div id="login-screen" class="hidden fixed inset-0 z-[100] bg-gradient-to-br from-indigo-700 via-indigo-800 to-purple-900 flex items-center justify-center p-4">
-        <!-- Botón de tutorial en la esquina superior derecha -->
-        <button onclick="openTutorialModal()" class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white rounded-full p-3 transition-colors flex items-center gap-2 text-sm font-medium backdrop-blur-sm" title="¿Cómo funciona la app?">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <span class="hidden sm:inline">¿Cómo funciona?</span>
-        </button>
-
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-2xl mb-4">
                     <svg class="w-9 h-9 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.256-.066a2 2 0 01.79-.066l1.066.066a3 3 0 003.926-3.685l-.243-.724a2 2 0 01.616-2.176l1.586-1.386a3 3 0 10-4-4.472l-1.586 1.386a2 2 0 01-2.176.616l-.724-.243a3 3 0 00-3.685 3.926l.066 1.066a2 2 0 01-.066.79l-.066.256zM15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800">Perfil Competencial</h1>
+                <h1 class="text-2xl font-bold text-gray-800">Evaluación Competencial</h1>
                 <p class="text-sm text-gray-600 mt-1">IES Virgen de Villadiego - Peñaflor, Sevilla</p>
             </div>
 
@@ -508,8 +513,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <svg class="w-8 h-8 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                <h1 class="text-xl font-bold tracking-tight">Perfil Competencial del Alumnado</h1>
-                <h2 id="nav-course-name" class="text-xl font-bold tracking-tight text-indigo-200 hidden"></h2>
+                <h1 class="text-xl font-bold tracking-tight">Evaluación Competencial Andalucía</h1>
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-sm font-medium text-indigo-200 hidden sm:block">
@@ -519,13 +523,13 @@
                 <div id="user-bar" class="hidden flex items-center gap-3 text-sm">
                     <span class="text-indigo-100">Conectado:</span>
                     <span id="user-display" class="font-semibold text-white bg-indigo-800 px-3 py-1 rounded-full"></span>
-                    <button onclick="openTutorialModal()" class="bg-indigo-800 hover:bg-indigo-900 text-white font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5" title="Ayuda: ¿Cómo funciona la app?">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span class="hidden sm:inline">Ayuda</span>
+                    <button onclick="openUserManagement()" id="btn-user-admin" class="hidden bg-amber-500 hover:bg-amber-600 text-white font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5" title="Gestionar usuarios">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        Usuarios
                     </button>
                     <button onclick="handleLogout()" class="bg-indigo-800 hover:bg-indigo-900 text-white font-medium py-1.5 px-3 rounded-lg transition-colors flex items-center gap-1.5" title="Cerrar sesión">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                        <span class="hidden sm:inline">Salir</span>
+                        Salir
                     </button>
                 </div>
             </div>
@@ -536,9 +540,9 @@
         
         <!-- Controles de Configuración y Unidades Guardadas -->
         <div class="flex flex-col md:flex-row gap-6 mb-8">
-            <!-- Gestión: curso académico y usuarios -->
+            <!-- Selección de Curso Académico, Nivel y Unidad -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex-1">
-                <h2 class="text-lg font-semibold mb-4 text-gray-700">1. Gestión</h2>
+                <h2 class="text-lg font-semibold mb-4 text-gray-700">1. Seleccionar Grupo</h2>
 
                 <!-- Curso académico (solo admin puede cambiarlo/gestionarlo) -->
                 <div class="mb-4">
@@ -554,65 +558,7 @@
                     </select>
                 </div>
 
-                <!-- Gestión de usuarios (solo admin) -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-600 mb-1">Usuarios</label>
-                    <button onclick="openUserManagement()" id="btn-user-admin" class="hidden w-full bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 border border-amber-200" title="Gestionar usuarios (solo admin)">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                        Gestionar usuarios
-                    </button>
-                    <p id="user-admin-hint" class="text-xs text-gray-400 mt-1 hidden">Solo el administrador puede gestionar usuarios.</p>
-                </div>
-            </div>
-
-            <!-- Unidades Guardadas -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex-1 flex flex-col">
-                <div class="flex justify-between items-start mb-4">
-                    <h2 class="text-lg font-semibold text-gray-700">Unidades Guardadas</h2>
-                    <div class="flex gap-2 flex-wrap justify-end">
-                        <button id="btn-export-json" onclick="exportJSON()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200" title="Guardar a archivo .json">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Exportar
-                        </button>
-                        <input type="file" id="import-json" accept=".json" class="hidden" onchange="importJSON(event)">
-                        <label id="btn-import-json" for="import-json" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200 cursor-pointer" title="Cargar desde archivo .json">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                            Importar
-                        </label>
-                        <button onclick="openMultiPrintModal()" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-emerald-200" title="Imprimir / Guardar como PDF varias unidades en un único documento">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                            Exportar PDF
-                        </button>
-                        <button id="btn-delete-all-units" onclick="confirmDeleteAllUnits()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-red-200" title="Borrar todas las unidades">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            Borrar
-                        </button>
-                    </div>
-                </div>
-                <div id="saved-units-container" class="flex flex-wrap gap-2 flex-grow items-start content-start">
-                    <p class="text-sm text-gray-400 italic" id="no-units-msg">No hay unidades guardadas en esta sesión.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Panel de Carga de Archivos (Acordeón, inicialmente desplegado) -->
-        <div id="upload-section-wrapper" class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
-            <!-- Cabecera del acordeón (clic para plegar/desplegar) -->
-            <button type="button" onclick="toggleUploadSection()" id="upload-section-header" class="w-full flex justify-between items-center p-6 hover:bg-gray-50 transition-colors text-left">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-indigo-600 transform transition-transform" id="upload-section-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        2. Cargar Archivos de Calificaciones (.xls, .csv)
-                    </h2>
-                    <p class="text-sm text-gray-500 mt-1 ml-7">Sube los archivos correspondientes a las 8 competencias clave.</p>
-                </div>
-                <span class="text-xs text-gray-400 hidden sm:block" id="upload-section-state">Desplegado</span>
-            </button>
-
-            <!-- Contenido plegable -->
-            <div id="upload-section-content" class="px-6 pb-6">
-                <!-- Selección de Nivel y Unidad (movidos desde la sección de Gestión) -->
-                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <div class="flex flex-col sm:flex-row gap-4">
                     <div class="flex-1">
                         <label class="block text-sm font-medium text-gray-600 mb-1">Nivel</label>
                         <select id="select-level" onchange="onGroupChanged()" class="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2.5 outline-none transition-colors">
@@ -630,9 +576,56 @@
                         </select>
                     </div>
                 </div>
+            </div>
 
+            <!-- Unidades Guardadas -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex-1 flex flex-col">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700">Unidades Guardadas</h2>
+                    <div class="flex gap-2 flex-wrap justify-end">
+                        <button onclick="exportJSON()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200" title="Guardar a archivo .json">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Exportar
+                        </button>
+                        <input type="file" id="import-json" accept=".json" class="hidden" onchange="importJSON(event)">
+                        <label for="import-json" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200 cursor-pointer" title="Cargar desde archivo .json">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Importar
+                        </label>
+                        <button onclick="openMultiPrintModal()" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-emerald-200" title="Imprimir / Guardar como PDF varias unidades en un único documento">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            Exportar PDF
+                        </button>
+                        <button onclick="confirmDeleteAllUnits()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-red-200" title="Borrar todas las unidades">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Borrar
+                        </button>
+                    </div>
+                </div>
+                <div id="saved-units-container" class="flex flex-wrap gap-2 flex-grow items-start content-start">
+                    <p class="text-sm text-gray-400 italic" id="no-units-msg">No hay unidades guardadas en esta sesión.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Carga de Archivos (Acordeón, inicialmente desplegado) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+            <!-- Cabecera del acordeón (clic para plegar/desplegar) -->
+            <button type="button" onclick="toggleUploadSection()" id="upload-section-header" class="w-full flex justify-between items-center p-6 hover:bg-gray-50 transition-colors text-left">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600 transform transition-transform" id="upload-section-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        2. Cargar Archivos de Calificaciones (.xls, .csv)
+                    </h2>
+                    <p class="text-sm text-gray-500 mt-1 ml-7">Sube los archivos correspondientes a las 8 competencias clave.</p>
+                </div>
+                <span class="text-xs text-gray-400 hidden sm:block" id="upload-section-state">Desplegado</span>
+            </button>
+
+            <!-- Contenido plegable -->
+            <div id="upload-section-content" class="px-6 pb-6">
                 <div class="flex justify-end mb-4">
-                    <button id="btn-clear-files" onclick="clearAllFiles()" class="text-sm text-red-600 hover:text-red-800 transition-colors whitespace-nowrap">Limpiar archivos</button>
+                    <button onclick="clearAllFiles()" class="text-sm text-red-600 hover:text-red-800 transition-colors whitespace-nowrap">Limpiar archivos</button>
                 </div>
 
                 <!-- Carga Masiva -->
@@ -651,8 +644,13 @@
                     </label>
                 </div>
 
+                <!-- Grid individual -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="upload-grid">
+                    <!-- Se generan dinámicamente mediante JS -->
+                </div>
+
                 <div class="mt-8 flex flex-wrap gap-4 items-center">
-                    <button id="btn-process-files" onclick="processFiles()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all flex items-center gap-2 transform active:scale-95">
+                    <button onclick="processFiles()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all flex items-center gap-2 transform active:scale-95">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                         Procesar Calificaciones
                     </button>
@@ -684,7 +682,7 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                                 Exportar PDF
                             </button>
-                            <button id="btn-delete-active-course" onclick="confirmDeleteActiveCourse()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm flex items-center gap-1.5 shadow-sm" title="Eliminar este curso de la pantalla y la memoria">
+                            <button onclick="confirmDeleteActiveCourse()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm flex items-center gap-1.5 shadow-sm" title="Eliminar este curso de la pantalla y la memoria">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 Eliminar Curso
                             </button>
@@ -743,8 +741,7 @@
                             </div>
                         </div>
 
-                        <!-- Rótulo TITULA / NO TITULA -->
-                        <div id="titula-banner" class="hidden px-6 py-4 text-center font-extrabold text-2xl mb-4"></div>
+                        <!-- (El banner TITULA/NO TITULA se ha movido a la sección de titulación debajo de la tabla) -->
 
                         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
                             <div class="overflow-x-auto">
@@ -759,6 +756,59 @@
                             </div>
                             <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
                                 <p><strong>Leyenda:</strong> <span class="inline-block w-3 h-3 bg-red-500 rounded mr-1 align-middle"></span> Suspensa (&lt;5) &nbsp;|&nbsp; <span class="inline-block w-3 h-3 bg-emerald-500 rounded mr-1 align-middle"></span> Aprobada (≥5) &nbsp;|&nbsp; <span class="inline-block w-3 h-3 bg-gray-200 rounded mr-1 align-middle"></span> Sin relación con este objetivo &nbsp;|&nbsp; <strong>Umbral de titulación:</strong> 6 o más objetivos conseguidos de 12.</p>
+                            </div>
+                        </div>
+
+                        <!-- ============================================================ -->
+                        <!--  SECCIÓN TITULACIÓN                                           -->
+                        <!-- ============================================================ -->
+                        <div id="titulation-section" class="mt-6 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                            <div class="px-6 py-4 bg-indigo-50 border-b border-indigo-100">
+                                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                    Titulación
+                                </h2>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <!-- Nombre del alumno -->
+                                <div class="text-center">
+                                    <h3 id="titulation-student-name" class="text-2xl font-bold text-gray-800"></h3>
+                                </div>
+
+                                <!-- Recuadros de competencias y objetivos -->
+                                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                    <!-- Competencias superadas -->
+                                    <div id="titulation-competences-box" class="flex-1 rounded-2xl p-6 text-center border-2">
+                                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Competencias superadas</p>
+                                        <p id="titulation-competences-value" class="text-4xl font-extrabold"></p>
+                                        <p class="text-sm text-gray-400 mt-1">de 8</p>
+                                    </div>
+                                    <!-- Objetivos conseguidos -->
+                                    <div id="titulation-objectives-box" class="flex-1 rounded-2xl p-6 text-center border-2">
+                                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Objetivos conseguidos</p>
+                                        <p id="titulation-objectives-value" class="text-4xl font-extrabold"></p>
+                                        <p class="text-sm text-gray-400 mt-1">de 12</p>
+                                    </div>
+                                </div>
+
+                                <!-- Etiqueta grande de resultado -->
+                                <div id="titulation-result" class="text-center py-6 rounded-2xl">
+                                    <p id="titulation-result-text" class="text-3xl font-extrabold"></p>
+                                    <p id="titulation-result-detail" class="text-sm mt-2"></p>
+                                </div>
+
+                                <!-- Botones de navegación entre alumnos -->
+                                <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+                                    <button id="btn-prev-student" onclick="navigateStudent(-1)" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors flex items-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                                        Anterior
+                                    </button>
+                                    <span id="titulation-student-counter" class="text-sm text-gray-500"></span>
+                                    <button id="btn-next-student" onclick="navigateStudent(1)" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors flex items-center gap-2">
+                                        Siguiente
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -784,91 +834,6 @@
                     <button onclick="closePdfModal()" class="px-4 py-2 rounded-lg font-medium bg-gray-200 hover:bg-gray-300 text-gray-800 transition-colors">Cancelar</button>
                     <button onclick="generateMultiplePrint()" class="px-4 py-2 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">Generar PDF</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!--  MODAL TUTORIAL / AYUDA                                       -->
-    <!-- ============================================================ -->
-    <div id="tutorial-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110]" onclick="if(event.target===this)closeTutorialModal()">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-start p-6 border-b border-gray-200">
-                <div class="flex items-center gap-3">
-                    <div class="inline-flex items-center justify-center w-10 h-10 bg-indigo-100 rounded-xl">
-                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800">¿Cómo funciona la app?</h3>
-                </div>
-                <button onclick="closeTutorialModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-                <!-- Paso 1 -->
-                <div class="flex gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">1</div>
-                    <div>
-                        <h4 class="font-semibold text-gray-800">Iniciar sesión</h4>
-                        <p class="text-sm text-gray-600 mt-1">Introduce tu usuario y contraseña. Si es la primera vez, escribe <code class="bg-gray-100 px-1 rounded">admin</code> y la contraseña que elijas: la app te ofrecerá crear el usuario administrador automáticamente.</p>
-                    </div>
-                </div>
-
-                <!-- Paso 2 -->
-                <div class="flex gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">2</div>
-                    <div>
-                        <h4 class="font-semibold text-gray-800">Gestión del curso y usuarios</h4>
-                        <p class="text-sm text-gray-600 mt-1">En el panel "1. Gestión", el administrador puede seleccionar el <strong>curso académico</strong>, gestionar cursos (crear, finalizar, eliminar) y gestionar <strong>usuarios</strong> (crear, editar, eliminar). Los usuarios normales solo pueden ver el curso activo.</p>
-                    </div>
-                </div>
-
-                <!-- Paso 3 -->
-                <div class="flex gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">3</div>
-                    <div>
-                        <h4 class="font-semibold text-gray-800">Seleccionar grupo y cargar archivos</h4>
-                        <p class="text-sm text-gray-600 mt-1">Despliega el panel "2. Cargar Archivos". Primero selecciona el <strong>nivel</strong> (1º a 4º ESO) y la <strong>unidad</strong> (A o B). Luego pulsa <strong>"Seleccionar Varios Archivos"</strong> y elige los 8 archivos <code class="bg-gray-100 px-1 rounded">.xls</code> de las competencias (CCL, CP, STEM, CD, CPSAA, CC, CE, CCEC) a la vez. El sistema los asignará automáticamente a cada competencia según el nombre del archivo.</p>
-                    </div>
-                </div>
-
-                <!-- Paso 4 -->
-                <div class="flex gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">4</div>
-                    <div>
-                        <h4 class="font-semibold text-gray-800">Procesar calificaciones</h4>
-                        <p class="text-sm text-gray-600 mt-1">Pulsa <strong>"Procesar Calificaciones"</strong>. La app leerá las notas de cada descriptor operativo, calculará las medias por competencia y mostrará la tabla del <strong>Perfil Competencial</strong>. Los datos se guardan automáticamente en la nube.</p>
-                    </div>
-                </div>
-
-                <!-- Paso 5 -->
-                <div class="flex gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">5</div>
-                    <div>
-                        <h4 class="font-semibold text-gray-800">Consultar Objetivos de Etapa (4º ESO)</h4>
-                        <p class="text-sm text-gray-600 mt-1">En 4º de ESO aparece automáticamente una tabla con los <strong>12 objetivos de etapa</strong> y los <strong>34 descriptores operativos</strong>. Las celdas en <span class="text-green-600 font-semibold">verde</span> indican descriptor aprobado, las en <span class="text-red-600 font-semibold">rojo</span> suspenso. Un objetivo se consigue aprobando al menos la mitad de sus descriptores. Si el alumno tiene 6 o más objetivos, aparecerá el rótulo <span class="text-green-600 font-bold">★ TITULA ★</span>.</p>
-                    </div>
-                </div>
-
-                <!-- Paso 6 -->
-                <div class="flex gap-3">
-                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm">6</div>
-                    <div>
-                        <h4 class="font-semibold text-gray-800">Exportar a PDF</h4>
-                        <p class="text-sm text-gray-600 mt-1">Pulsa <strong>"Exportar PDF"</strong> para generar un documento con la tabla de competencias. Se abrirá el diálogo de impresión del navegador; elige "Guardar como PDF" como destino.</p>
-                    </div>
-                </div>
-
-                <!-- Nota adicional -->
-                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-800">
-                    <p class="flex items-start gap-2">
-                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>Los datos se sincronizan automáticamente con la base de datos. Si cambias de grupo, los archivos cargados se borran para evitar mezclar datos.</span>
-                    </p>
-                </div>
-            </div>
-
-            <div class="p-4 border-t border-gray-200 flex justify-end">
-                <button onclick="closeTutorialModal()" class="px-6 py-2 rounded-lg font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">Entendido</button>
             </div>
         </div>
     </div>
@@ -1131,12 +1096,55 @@
         }
 
         // Elementos del DOM
+        const grid = document.getElementById('upload-grid');
         const modal = document.getElementById('custom-modal');
         const loading = document.getElementById('loading-overlay');
 
+        // Inicializar interfaz de subida
+        function initUploadGrid() {
+            grid.innerHTML = '';
+            COMPETENCES_ORDER.forEach(comp => {
+                const id = `file-${comp}`;
+                const html = `
+                    <div class="relative group">
+                        <input type="file" id="${id}" accept=".csv, .xls, .xlsx" class="hidden" onchange="updateFileLabel('${comp}')">
+                        <label for="${id}" id="label-${comp}" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-indigo-50 hover:border-indigo-400 transition-all">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6 text-gray-500 group-hover:text-indigo-500">
+                                <svg class="w-8 h-8 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                <p class="mb-1 text-sm font-semibold">${comp}</p>
+                                <p class="text-xs opacity-70 text-center px-2 truncate w-full" id="filename-${comp}">Sin seleccionar</p>
+                            </div>
+                        </label>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // Actualizar UI al seleccionar archivo
+        function updateFileLabel(comp) {
+            const input = document.getElementById(`file-${comp}`);
+            const label = document.getElementById(`label-${comp}`);
+            const filename = document.getElementById(`filename-${comp}`);
+            
+            if (input.files && input.files[0]) {
+                label.classList.replace('border-gray-300', 'border-emerald-500');
+                label.classList.replace('bg-gray-50', 'bg-emerald-50');
+                filename.textContent = input.files[0].name;
+                filename.classList.replace('opacity-70', 'text-emerald-600');
+                filename.title = input.files[0].name;
+            } else {
+                // Estado por defecto si se borra
+                label.classList.remove('border-emerald-500', 'bg-emerald-50');
+                label.classList.add('border-gray-300', 'bg-gray-50');
+                filename.textContent = 'Sin seleccionar';
+                filename.classList.replace('text-emerald-600', 'opacity-70');
+                filename.title = '';
+            }
+        }
+
         // --- CARGA MASIVA ---
         function handleBulkUpload(event) {
-            if (!requireAdmin()) { event.target.value = ''; return; }
             const files = Array.from(event.target.files);
             if (files.length === 0) return;
 
@@ -1173,7 +1181,6 @@
         }
 
         function clearAllFiles() {
-            if (!requireAdmin()) return;
             COMPETENCES_ORDER.forEach(comp => {
                 const input = document.getElementById(`file-${comp}`);
                 if (input) input.value = '';
@@ -1251,7 +1258,6 @@
         // Nota: asignar select.value programáticamente (p.ej. en loadUnit) NO
         // dispara el evento 'change', así que no hace falta un flag de supresión.
         function onGroupChanged() {
-            // Solo el admin puede cambiar de grupo; si no es admin, no hacer nada.
             // Comprobar si hay algún archivo cargado en los inputs
             let anyFile = false;
             for (const comp of COMPETENCES_ORDER) {
@@ -1297,7 +1303,6 @@
 
         // --- EXPORTAR E IMPORTAR CONFIGURACIÓN (.JSON) ---
         function exportJSON() {
-            if (!requireAdmin()) return;
             if (Object.keys(savedUnits).length === 0) {
                 showModal('Exportar', 'No hay unidades guardadas para exportar.', [{ text: 'Entendido', type: 'primary' }]);
                 return;
@@ -1318,8 +1323,6 @@
         }
 
         function importJSON(event) {
-            if (!requireAdmin()) { event.target.value = ''; return; }
-            if (!requireEditableCourse()) { event.target.value = ''; return; }
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1446,7 +1449,7 @@
                 <div class="pdf-page" style="padding:0 0 16px 0;">
                     <div style="border-bottom:2px solid #4f46e5;padding-bottom:10px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-end;">
                         <div>
-                            <h1 style="font-size:22px;font-weight:bold;color:#1e1b4b;margin:0;font-family:system-ui;">Perfil Competencial de Alumnado — ${escapeHTML(coursesCache[currentCourseId]?.name || currentCourseId || '')}</h1>
+                            <h1 style="font-size:22px;font-weight:bold;color:#1e1b4b;margin:0;font-family:system-ui;">Perfil Competencial de Alumnado</h1>
                             <p style="font-size:12px;color:#4f46e5;font-weight:600;margin:3px 0 0 0;text-transform:uppercase;letter-spacing:0.05em;">IES Virgen de Villadiego - Peñaflor, Sevilla</p>
                         </div>
                         <div style="text-align:right;">
@@ -1677,9 +1680,6 @@
         }
 
         async function processFiles() {
-            if (!requireAdmin()) return;
-            // No se puede procesar en un curso finalizado
-            if (!requireEditableCourse()) return;
             // Verificar que hay un curso académico activo antes de procesar.
             // Las unidades se guardan en la BD aisladas por curso; sin curso activo
             // no se puede sincronizar.
@@ -1927,12 +1927,15 @@
         function updateObjectivesSection() {
             const level = document.getElementById('select-level').value;
             const section = document.getElementById('objectives-section');
+            const titulation = document.getElementById('titulation-section');
             if (level === '4' && currentProcessedData) {
                 section.classList.remove('hidden');
+                if (titulation) titulation.classList.remove('hidden');
                 populateStudentSelector();
                 renderObjectivesTable();
             } else {
                 section.classList.add('hidden');
+                if (titulation) titulation.classList.add('hidden');
             }
         }
 
@@ -1955,7 +1958,7 @@
             });
 
             // Mantener la selección previa si sigue siendo válida
-            if (prevValue !== '' && Number(prevValue) < currentProcessedData.length) {
+            if (prevValue && prevValue < currentProcessedData.length) {
                 select.value = prevValue;
             }
         }
@@ -2129,8 +2132,8 @@
             totalTr.innerHTML = totalHtml;
             tbody.appendChild(totalTr);
 
-            // Actualizar rótulo TITULA / NO TITULA
-            updateTitulaBanner(status.totalAchieved);
+            // Actualizar sección de titulación
+            updateTitulationSection(student, status);
 
             // Guardar los objetivos calculados en el objeto del estudiante para
             // que se sincronicen con Firebase cuando se guarde la unidad.
@@ -2142,24 +2145,123 @@
             student.objectives.titula = status.totalAchieved >= 6;
         }
 
-        // Muestra u oculta el rótulo TITULA / NO TITULA.
-        // - 6 o más objetivos conseguidos → "TITULA" (verde, destacado)
-        // - menos de 6 → "NO TITULA" (rojo)
-        function updateTitulaBanner(totalAchieved) {
-            const banner = document.getElementById('titula-banner');
-            if (totalAchieved === null || totalAchieved === undefined) {
-                banner.classList.add('hidden');
-                banner.textContent = '';
+        // ============================================================
+        //  SECCIÓN TITULACIÓN
+        // ============================================================
+        // Actualiza la sección de titulación con los datos del alumno.
+        // - Competencias superadas: de 8, con color degradado (verde si >=5, rojo si <=4)
+        // - Objetivos conseguidos: de 12, con color degradado (verde si >=6, rojo si <6)
+        // - Resultado: TITULA / DEBATE / NO TITULA según combinación
+        function updateTitulationSection(student, objectivesStatus) {
+            const section = document.getElementById('titulation-section');
+            if (!student || !objectivesStatus) {
+                if (section) section.classList.add('hidden');
                 return;
             }
-            banner.classList.remove('hidden');
-            if (totalAchieved >= 6) {
-                banner.textContent = `★ TITULA ★ (${totalAchieved}/12 objetivos conseguidos)`;
-                banner.className = 'px-6 py-5 text-center font-extrabold text-2xl bg-emerald-100 text-emerald-800 border-y-2 border-emerald-300';
+            section.classList.remove('hidden');
+
+            // Nombre del alumno
+            document.getElementById('titulation-student-name').textContent = student.name || '';
+
+            // Contador de alumno (ej: "Alumno 3 de 25")
+            const select = document.getElementById('objectives-student-select');
+            const idx = parseInt(select.value, 10);
+            const total = currentProcessedData ? currentProcessedData.length : 0;
+            document.getElementById('titulation-student-counter').textContent = total > 0 ? `Alumno ${idx + 1} de ${total}` : '';
+
+            // Competencias superadas (de 8)
+            const compPassed = COMPETENCES_ORDER.filter(comp => {
+                const g = student.competences?.[comp];
+                return g !== null && g !== undefined && g >= 5;
+            }).length;
+            const compBox = document.getElementById('titulation-competences-box');
+            const compVal = document.getElementById('titulation-competences-value');
+            compVal.textContent = compPassed;
+            // Degradado: 8 → verde intenso, 5 → verde claro, 4 → rojo claro, 0 → rojo intenso
+            const compColor = getGradeBoxColor(compPassed, 8, 5);
+            compBox.style.backgroundColor = compColor.bg;
+            compBox.style.borderColor = compColor.border;
+            compBox.style.color = compColor.text;
+
+            // Objetivos conseguidos (de 12)
+            const objAchieved = objectivesStatus.totalAchieved || 0;
+            const objBox = document.getElementById('titulation-objectives-box');
+            const objVal = document.getElementById('titulation-objectives-value');
+            objVal.textContent = objAchieved;
+            // Degradado: 12 → verde intenso, 6 → verde claro, 5 → rojo claro, 0 → rojo intenso
+            const objColor = getGradeBoxColor(objAchieved, 12, 6);
+            objBox.style.backgroundColor = objColor.bg;
+            objBox.style.borderColor = objColor.border;
+            objBox.style.color = objColor.text;
+
+            // Resultado: combinación de competencias y objetivos
+            const compOk = compPassed >= 5;   // 5 o más competencias superadas
+            const objOk = objAchieved >= 6;   // 6 o más objetivos conseguidos
+            const resultDiv = document.getElementById('titulation-result');
+            const resultText = document.getElementById('titulation-result-text');
+            const resultDetail = document.getElementById('titulation-result-detail');
+
+            if (compOk && objOk) {
+                resultText.textContent = '★ TITULA ★';
+                resultDetail.textContent = 'Competencias superadas y objetivos de etapa conseguidos.';
+                resultDiv.style.backgroundColor = '#d1fae5';
+                resultDiv.style.color = '#065f46';
+            } else if (compOk !== objOk) {
+                resultText.textContent = '⚠ DEBATE EN EL SENO DEL EQUIPO DOCENTE ⚠';
+                resultDetail.textContent = compOk
+                    ? `Competencias superadas (${compPassed}/8) pero objetivos no alcanzados (${objAchieved}/12).`
+                    : `Objetivos alcanzados (${objAchieved}/12) pero competencias no superadas (${compPassed}/8).`;
+                resultDiv.style.backgroundColor = '#fef3c7';
+                resultDiv.style.color = '#92400e';
             } else {
-                banner.textContent = `✕ NO TITULA ✕ (${totalAchieved}/12 objetivos conseguidos)`;
-                banner.className = 'px-6 py-5 text-center font-extrabold text-2xl bg-red-100 text-red-800 border-y-2 border-red-300';
+                resultText.textContent = '✕ NO TITULA ✕';
+                resultDetail.textContent = `Competencias no superadas (${compPassed}/8) y objetivos no alcanzados (${objAchieved}/12).`;
+                resultDiv.style.backgroundColor = '#fee2e2';
+                resultDiv.style.color = '#991b1b';
             }
+        }
+
+        // Calcula el color de un recuadro según el valor, el máximo y el umbral.
+        // Por encima del umbral → verde (más intenso cuanto más cerca del máximo).
+        // Por debajo del umbral → rojo (más intenso cuanto más cerca de 0).
+        function getGradeBoxColor(value, max, threshold) {
+            if (value >= threshold) {
+                const ratio = max > threshold ? (value - threshold) / (max - threshold) : 1;
+                // Verde: de #d1fae5 (claro) a #16a34a (intenso)
+                const l = 90 - ratio * 45;
+                return {
+                    bg: `hsl(140, 70%, ${l}%)`,
+                    border: `hsl(140, 70%, ${Math.max(35, l - 20)}%)`,
+                    text: l < 55 ? '#ffffff' : '#1f2937'
+                };
+            } else {
+                const ratio = threshold > 0 ? (threshold - value) / threshold : 1;
+                // Rojo: de #fee2e2 (claro) a #dc2626 (intenso)
+                const l = 90 - ratio * 45;
+                return {
+                    bg: `hsl(0, 70%, ${l}%)`,
+                    border: `hsl(0, 70%, ${Math.max(35, l - 20)}%)`,
+                    text: l < 55 ? '#ffffff' : '#1f2937'
+                };
+            }
+        }
+
+        // Navega al alumno anterior (-1) o siguiente (+1) en la sección de titulación.
+        function navigateStudent(direction) {
+            const select = document.getElementById('objectives-student-select');
+            if (!select || !currentProcessedData || currentProcessedData.length === 0) return;
+
+            let idx = parseInt(select.value, 10);
+            if (isNaN(idx)) idx = 0;
+            idx += direction;
+
+            // Wrap around
+            if (idx < 0) idx = currentProcessedData.length - 1;
+            if (idx >= currentProcessedData.length) idx = 0;
+
+            select.value = String(idx);
+            renderObjectivesTable();
+            selectStudentInObjectives(idx);
         }
 
         // --- GESTIÓN DE UNIDADES (MEMORIA + BD) ---
@@ -2229,17 +2331,12 @@
                 btnDelete.onclick = () => confirmDeleteUnit(key);
 
                 wrapper.appendChild(btnLoad);
-                // Solo el admin puede ver el botón de borrado
-                if (isCurrentUserAdmin()) {
-                    wrapper.appendChild(btnDelete);
-                }
+                wrapper.appendChild(btnDelete);
                 container.appendChild(wrapper);
             });
         }
 
         function confirmDeleteUnit(key) {
-            if (!requireAdmin()) return;
-            if (!requireEditableCourse()) return;
             showModal('Borrar unidad', `¿Estás seguro de que deseas borrar los datos de la unidad "${key}"?`, [
                 { text: 'Cancelar', type: 'secondary' },
                 { text: 'Borrar', type: 'danger', action: () => {
@@ -2252,8 +2349,6 @@
         }
 
         function confirmDeleteAllUnits() {
-            if (!requireAdmin()) return;
-            if (!requireEditableCourse()) return;
             if (Object.keys(savedUnits).length === 0) {
                 showModal('Borrar', 'No hay unidades guardadas para borrar.', [{ text: 'Entendido', type: 'primary' }]);
                 return;
@@ -2298,8 +2393,6 @@
 
         // --- ELIMINAR CURSO ACTIVO ---
         function confirmDeleteActiveCourse() {
-            if (!requireAdmin()) return;
-            if (!requireEditableCourse()) return;
             const lvl = document.getElementById('select-level').value;
             const unit = document.getElementById('select-unit').value;
             const key = getUnitKey(lvl, unit);
@@ -2460,16 +2553,6 @@
             return currentUser && currentUser.isAdmin;
         }
 
-        // Guard: si el usuario no es admin, muestra un mensaje y devuelve false.
-        // Se usa al inicio de funciones sensibles (procesar, borrar, exportar, etc.)
-        function requireAdmin() {
-            if (!isCurrentUserAdmin()) {
-                showModal('Acceso denegado', 'Solo el administrador puede realizar esta acción. Tu perfil de usuario es de solo lectura: puedes consultar las tablas e imprimir, pero no modificar datos.', [{ text: 'Entendido', type: 'primary' }]);
-                return false;
-            }
-            return true;
-        }
-
         function showLoginScreen() {
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('user-bar').classList.add('hidden');
@@ -2483,55 +2566,14 @@
             document.getElementById('user-bar').classList.remove('hidden');
             document.getElementById('user-bar').classList.add('flex');
             document.getElementById('user-display').textContent = currentUser.username;
-
-            // Mostrar/ocultar elementos según rol
-            const isAdmin = currentUser.isAdmin;
             const adminBtn = document.getElementById('btn-user-admin');
-            const adminHint = document.getElementById('user-admin-hint');
-            if (isAdmin) {
+            if (currentUser.isAdmin) {
                 adminBtn.classList.remove('hidden');
                 adminBtn.classList.add('flex');
-                if (adminHint) adminHint.classList.add('hidden');
             } else {
                 adminBtn.classList.add('hidden');
                 adminBtn.classList.remove('flex');
-                if (adminHint) adminHint.classList.remove('hidden');
             }
-
-            // === PERMISOS DE USUARIO NORMAL (no admin) ===
-            // El usuario normal SOLO puede: ver las tablas, navegar por alumnos,
-            // e imprimir/exportar PDF. No puede procesar archivos, borrar, exportar
-            // importar JSON, ni gestionar cursos/usuarios.
-            const adminOnlyIds = [
-                'btn-manage-courses',     // Gestionar cursos
-                'btn-process-files',      // Procesar Calificaciones
-                'btn-clear-files',        // Limpiar archivos
-                'btn-export-json',        // Exportar JSON
-                'btn-import-json',        // Importar JSON
-                'btn-delete-all-units',   // Borrar todas las unidades
-                'btn-delete-active-course'// Eliminar Curso activo
-            ];
-            adminOnlyIds.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    if (isAdmin) {
-                        el.classList.remove('hidden');
-                    } else {
-                        el.classList.add('hidden');
-                    }
-                }
-            });
-
-            // El acordeón completo de "Cargar Archivos" se oculta para usuarios no-admin.
-            // El usuario normal solo consulta datos ya cargados por el admin; no puede procesar.
-            const uploadWrapper = document.getElementById('upload-section-wrapper');
-            if (uploadWrapper) uploadWrapper.classList.toggle('hidden', !isAdmin);
-
-            // Las unidades guardadas: ocultar botones de borrado individual
-            // (se gestionan dinámicamente en updateSavedUnitsUI, pero añadimos
-            // un flag global que esa función consultará)
-            // (window.__isAdmin eliminado: updateSavedUnitsUI usa isCurrentUserAdmin() directamente)
-
             // Quitar la clase de booting: ya sabemos qué mostrar (app)
             document.body.classList.remove('app-booting');
         }
@@ -2635,17 +2677,6 @@
             const errorDiv = document.getElementById('login-error');
             errorDiv.textContent = msg;
             errorDiv.classList.remove('hidden');
-        }
-
-        // ============================================================
-        //  MODAL TUTORIAL
-        // ============================================================
-        function openTutorialModal() {
-            document.getElementById('tutorial-modal').classList.remove('hidden');
-        }
-
-        function closeTutorialModal() {
-            document.getElementById('tutorial-modal').classList.add('hidden');
         }
 
         async function handleLogout() {
@@ -2772,12 +2803,8 @@
                     _unitsSubscription = null;
                 }
 
-                // Suscripción en tiempo real a /data/{cursoId}
-                // Los datos se guardan bajo el usuario 'admin' y todos los usuarios
-                // los consultan desde ahí. Así el admin carga los archivos y todos
-                // los profesores pueden verlos en tiempo real.
-                const dataUser = 'admin';
-                const unitsRef = M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${dataUser}/${currentCourseId}`);
+                // Suscripción en tiempo real a /data/{username}/{cursoId}
+                const unitsRef = M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}`);
                 _unitsSubscription = M.onValue(unitsRef, (snap) => {
                     // Si este evento lo disparó nuestra propia escritura, ignoramos
                     // la actualización de la UI para no pisar cambios locales recientes.
@@ -2836,9 +2863,10 @@
             }
             try {
                 const M = window.fbModules;
+                // Marcar que la próxima notificación de onValue la disparó esta
+                // escritura, para evitar un bucle de actualización de UI.
                 _suppressNextSync = true;
-                // Los datos se guardan bajo 'admin' para que todos los usuarios los vean
-                await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/admin/${currentCourseId}/${key}`), unitData);
+                await M.set(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}/${key}`), unitData);
                 return true;
             } catch (err) {
                 _suppressNextSync = false;
@@ -2854,7 +2882,7 @@
             try {
                 const M = window.fbModules;
                 _suppressNextSync = true;
-                await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/admin/${currentCourseId}/${key}`));
+                await M.remove(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/data/${currentUser.username}/${currentCourseId}/${key}`));
                 return true;
             } catch (err) {
                 _suppressNextSync = false;
@@ -2871,133 +2899,10 @@
         // Estado global del curso activo (cursoId seleccionado por el admin).
         // Todos los usuarios ven el mismo curso activo (lo establece el admin).
         let currentCourseId = null;       // id del curso activo
-        let coursesCache = {};            // {cursoId: {name, createdAt, updatedAt, finalizado}}
+        let coursesCache = {};            // {cursoId: {name, createdAt, updatedAt}}
         let _coursesSubscription = null;  // suscripción a /cursos
         let _activeCourseSubscription = null;  // suscripción a /activeCourse
         let editingCourseId = null;       // cursoId que se está editando (null = crear)
-
-        // ============================================================
-        //  LÓGICA DE FINALIZACIÓN DE CURSOS
-        // ============================================================
-        // Un curso se considera finalizado si:
-        //   1. Está marcado explícitamente como finalizado en la BD (por el admin), O
-        //   2. Ha pasado el 30 de junio del año de finalización del curso.
-        //
-        // El año de finalización se extrae del nombre del curso. Si el curso se llama
-        // "2024-2025", el año de finalización es 2025. La fecha límite es el 30 de
-        // junio de 2025. A partir del 1 de julio de 2025, el curso se finaliza
-        // automáticamente.
-        //
-        // REGLAS:
-        //   - Un curso finalizado NO puede ser modificado (procesar, borrar unidades, etc.)
-        //   - Un curso finalizado NO puede ser borrado.
-        //   - El admin puede marcar/desmarcar un curso como finalizado manualmente,
-        //     PERO solo si ya se ha alcanzado el 30 de junio del año de finalización.
-        //     Es decir: no se puede finalizar un curso antes de tiempo.
-
-        // Extrae el año de finalización del nombre del curso.
-        // Ej: "2024-2025" → 2025, "2025-2026" → 2026.
-        // Si no se puede extraer, devuelve null.
-        function getCourseEndYear(courseName) {
-            if (!courseName) return null;
-            // Buscar un patrón de tipo "YYYY-YYYY" o "YYYY/YYYY"
-            const match = courseName.match(/(\d{4})\s*[-/]\s*(\d{4})/);
-            if (match) return parseInt(match[2], 10);
-            // Si solo hay un año de 4 dígitos, usarlo
-            const singleYear = courseName.match(/\b(20\d{2})\b/);
-            if (singleYear) return parseInt(singleYear[1], 10);
-            return null;
-        }
-
-        // Comprueba si ya se ha alcanzado el 30 de junio del año de finalización.
-        // Devuelve true si la fecha actual es posterior o igual al 30 de junio.
-        function hasReachedEndDate(courseName) {
-            const endYear = getCourseEndYear(courseName);
-            if (!endYear) return false;
-            // 30 de junio del año de finalización, a las 23:59:59
-            const endDate = new Date(endYear, 5, 30, 23, 59, 59); // mes 5 = junio (0-indexed)
-            return new Date() >= endDate;
-        }
-
-        // Comprueba si un curso está finalizado (marcado en BD o auto-finalizado por fecha).
-        function isCourseFinished(courseId) {
-            const course = coursesCache[courseId];
-            if (!course) return false;
-            // Si está marcado explícitamente como finalizado en la BD
-            if (course.finalizado === true) return true;
-            // Auto-finalización: si ha pasado el 30 de junio del año de finalización
-            if (hasReachedEndDate(course.name)) {
-                // Marcarlo en la BD si no lo está ya (lo hace el onValue de cursos)
-                // pero la función solo consulta, no escribe.
-                return true;
-            }
-            return false;
-        }
-
-        // Comprueba si el curso ACTIVO está finalizado.
-        function isCurrentCourseFinished() {
-            return currentCourseId ? isCourseFinished(currentCourseId) : false;
-        }
-
-        // Verifica si se puede editar el curso activo. Si está finalizado, muestra
-        // un mensaje y devuelve false.
-        function requireEditableCourse() {
-            if (isCurrentCourseFinished()) {
-                const name = coursesCache[currentCourseId]?.name || currentCourseId;
-                showModal(
-                    'Curso finalizado',
-                    `El curso "${name}" está finalizado. No se pueden modificar sus datos.\n\nLos cursos se finalizan automáticamente al alcanzar el 30 de junio del año de finalización, o pueden ser marcados manualmente por el administrador.`,
-                    [{ text: 'Entendido', type: 'primary' }]
-                );
-                return false;
-            }
-            return true;
-        }
-
-        // Marca/desmarca un curso como finalizado (solo admin, con validación de fecha).
-        async function toggleCourseFinished(courseId) {
-            if (!isCurrentUserAdmin()) return;
-            const course = coursesCache[courseId];
-            if (!course) return;
-            const name = course.name || courseId;
-            const currentlyFinished = course.finalizado === true;
-
-            if (currentlyFinished) {
-                // Quitar la finalización
-                try {
-                    const M = window.fbModules;
-                    await M.update(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos/${courseId}`), {
-                        finalizado: false,
-                        updatedAt: Date.now()
-                    });
-                    showModal('Curso reactivado', `El curso "${name}" ya no está finalizado. Se pueden modificar los datos.`, [{ text: 'Aceptar', type: 'primary' }]);
-                } catch (err) {
-                    showModal('Error', `No se pudo reactivar el curso: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
-                }
-            } else {
-                // Marcar como finalizado: validar que se ha alcanzado el 30 de junio
-                if (!hasReachedEndDate(name)) {
-                    const endYear = getCourseEndYear(name);
-                    showModal(
-                        'No se puede finalizar',
-                        `No se puede finalizar el curso "${name}" porque aún no se ha alcanzado el 30 de junio${endYear ? ' de ' + endYear : ''}.\n\nLos cursos solo se pueden finalizar a partir del 30 de junio del año en el que terminan.`,
-                        [{ text: 'Entendido', type: 'primary' }]
-                    );
-                    return;
-                }
-                try {
-                    const M = window.fbModules;
-                    await M.update(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos/${courseId}`), {
-                        finalizado: true,
-                        updatedAt: Date.now()
-                    });
-                    showModal('Curso finalizado', `El curso "${name}" ha sido marcado como finalizado. Los datos quedan protegidos contra modificaciones.`, [{ text: 'Aceptar', type: 'primary' }]);
-                } catch (err) {
-                    showModal('Error', `No se pudo finalizar el curso: ${err.message || ''}`, [{ text: 'Cerrar', type: 'danger' }]);
-                }
-            }
-            await refreshCoursesList();
-        }
 
         // Rellena el selector de cursos en la UI según el rol del usuario.
         function applyCoursesToUI() {
@@ -3020,10 +2925,7 @@
             courseIds.forEach(id => {
                 const opt = document.createElement('option');
                 opt.value = id;
-                const course = coursesCache[id];
-                const name = course?.name || id;
-                const finished = isCourseFinished(id);
-                opt.textContent = finished ? `${name}  —  FINALIZADO` : name;
+                opt.textContent = coursesCache[id]?.name || id;
                 select.appendChild(opt);
             });
 
@@ -3042,19 +2944,6 @@
                 select.title = 'Solo el administrador puede cambiar de curso académico';
             } else {
                 select.title = 'Selecciona el curso académico activo para todos los usuarios';
-            }
-
-            // Actualizar el nombre del curso en el navbar (debajo del título)
-            const navCourseName = document.getElementById('nav-course-name');
-            if (navCourseName) {
-                if (currentCourseId && coursesCache[currentCourseId]) {
-                    const name = coursesCache[currentCourseId].name || currentCourseId;
-                    const finished = isCourseFinished(currentCourseId);
-                    navCourseName.textContent = finished ? `${name} (Finalizado)` : name;
-                    navCourseName.classList.remove('hidden');
-                } else {
-                    navCourseName.classList.add('hidden');
-                }
             }
         }
 
@@ -3094,28 +2983,16 @@
                 // Si ya no hay usuario logueado (p.ej. tras logout), ignorar el evento
                 if (!currentUser) return;
                 coursesCache = snap.exists() ? (snap.val() || {}) : {};
-
-                // Auto-finalización: si algún curso ha pasado el 30 de junio pero no
-                // está marcado como finalizado en la BD, marcarlo automáticamente.
-                // Esto lo hace cualquier cliente que detecte la condición; es idempotente.
-                for (const cid in coursesCache) {
-                    const course = coursesCache[cid];
-                    if (course && course.finalizado !== true && hasReachedEndDate(course.name)) {
-                        // Marcar en la BD (sin await: fire-and-forget)
-                        M.update(M.ref(window.fbDb, `${window.fbConfig.DB_ROOT}/cursos/${cid}`), {
-                            finalizado: true,
-                            autoFinalizado: true,
-                            updatedAt: Date.now()
-                        }).catch(e => console.warn('[Auto-finalizar] Error al marcar curso', cid, e));
-                        // Actualizar también en caché local para reflejarlo inmediatamente
-                        course.finalizado = true;
-                        course.autoFinalizado = true;
-                    }
-                }
-
                 applyCoursesToUI();
-                // Nota: el botón "Gestionar cursos" ya se gestiona en showApp()
-                // según el rol del usuario, no es necesario repetirlo aquí.
+                // Mostrar/ocultar botón "Gestionar cursos"
+                const btnManage = document.getElementById('btn-manage-courses');
+                if (isCurrentUserAdmin()) {
+                    btnManage.classList.remove('hidden');
+                    btnManage.classList.add('flex');
+                } else {
+                    btnManage.classList.add('hidden');
+                    btnManage.classList.remove('flex');
+                }
             });
 
             // Suscripción a /activeCourse
@@ -3168,38 +3045,15 @@
                 listEl.innerHTML = courseIds.map(id => {
                     const name = coursesCache[id]?.name || id;
                     const isActive = id === currentCourseId;
-                    const finished = isCourseFinished(id);
-                    const finishedBadge = finished
-                        ? '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-gray-200 text-gray-700">Finalizado</span>'
-                        : '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700">Activo</span>';
-
-                    // Botón de finalizar/reactivar (solo admin)
-                    let finishBtn = '';
-                    if (isCurrentUserAdmin()) {
-                        if (finished) {
-                            finishBtn = `<button onclick="toggleCourseFinished('${escapeHTML(id)}')" class="text-xs text-amber-600 hover:text-amber-800 font-medium ml-2" title="Reactivar curso">Reactivar</button>`;
-                        } else if (hasReachedEndDate(name)) {
-                            finishBtn = `<button onclick="toggleCourseFinished('${escapeHTML(id)}')" class="text-xs text-red-600 hover:text-red-800 font-medium ml-2" title="Finalizar curso">Finalizar</button>`;
-                        }
-                    }
-
-                    // Botón de eliminar: oculto si el curso está finalizado
-                    let deleteBtn = '';
-                    if (!finished) {
-                        deleteBtn = `<button onclick="confirmDeleteCourse('${escapeHTML(id)}')" class="text-red-600 hover:text-red-800 text-sm font-medium" title="Eliminar">Eliminar</button>`;
-                    }
-
                     return `
-                        <tr class="border-t border-gray-200 hover:bg-gray-50 ${finished ? 'bg-gray-50' : ''}">
+                        <tr class="border-t border-gray-200 hover:bg-gray-50">
                             <td class="px-4 py-3 font-medium text-gray-800">${escapeHTML(name)}</td>
                             <td class="px-4 py-3">
-                                ${isActive ? '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 mr-2">Activo</span>' : '<button onclick="setActiveCourse(\'' + escapeHTML(id) + '\')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium mr-2">Activar</button>'}
-                                ${finishedBadge}
-                                ${finishBtn}
+                                ${isActive ? '<span class="text-xs font-semibold px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">Activo</span>' : '<button onclick="setActiveCourse(\'' + escapeHTML(id) + '\')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Activar</button>'}
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 <button onclick="openCourseEditor('${escapeHTML(id)}')" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium mr-3" title="Editar">Editar</button>
-                                ${deleteBtn}
+                                <button onclick="confirmDeleteCourse('${escapeHTML(id)}')" class="text-red-600 hover:text-red-800 text-sm font-medium" title="Eliminar">Eliminar</button>
                             </td>
                         </tr>
                     `;
@@ -3312,13 +3166,6 @@
         function confirmDeleteCourse(courseId) {
             if (!isCurrentUserAdmin()) return;
             const name = coursesCache[courseId]?.name || courseId;
-
-            // No se puede borrar un curso finalizado
-            if (isCourseFinished(courseId)) {
-                showModal('No se puede borrar', `El curso "${name}" está finalizado y no puede ser eliminado. Los cursos finalizados quedan protegidos para conservar el historial académico.`, [{ text: 'Entendido', type: 'primary' }]);
-                return;
-            }
-
             if (courseId === currentCourseId) {
                 showModal('No permitido', 'No puedes eliminar el curso que está activo. Activa otro curso primero y luego elimina este.', [{ text: 'Entendido', type: 'primary' }]);
                 return;
@@ -3631,7 +3478,7 @@
 
         // Inicializar
         window.onload = () => {
-            // No hay inicialización de grid individual: se usa solo carga masiva
+            initUploadGrid();
         };
 
         // Esperar a que Firebase esté listo (evento 'firebase-ready' disparado por el script module).
