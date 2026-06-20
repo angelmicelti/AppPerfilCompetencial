@@ -211,7 +211,6 @@
             #user-bar span:first-child {
                 display: none; /* "Conectado:" */
             }
-            #btn-user-admin span:last-child,
             #user-bar > button:last-child span:last-child {
                 display: none; /* solo icono */
             }
@@ -242,7 +241,8 @@
            En móvil, reducir el min-width para que quepa más contenido. */
         @media (max-width: 640px) {
             #results-body td:first-child,
-            #results-thead th:first-child {
+            #results-thead th:first-child,
+            thead th:first-child {
                 min-width: 120px !important;
                 max-width: 140px;
                 font-size: 0.75rem;
@@ -2015,7 +2015,7 @@
             });
 
             // Mantener la selección previa si sigue siendo válida
-            if (prevValue && prevValue < currentProcessedData.length) {
+            if (prevValue !== '' && Number(prevValue) < currentProcessedData.length) {
                 select.value = prevValue;
             }
         }
@@ -2561,7 +2561,7 @@
             // === PERMISOS DE USUARIO NORMAL (no admin) ===
             // El usuario normal SOLO puede: ver las tablas, navegar por alumnos,
             // e imprimir/exportar PDF. No puede procesar archivos, borrar, exportar
-            ///importar JSON, ni gestionar cursos/usuarios.
+            // importar JSON, ni gestionar cursos/usuarios.
             const adminOnlyIds = [
                 'btn-manage-courses',     // Gestionar cursos
                 'btn-process-files',      // Procesar Calificaciones
@@ -2600,7 +2600,7 @@
             // Las unidades guardadas: ocultar botones de borrado individual
             // (se gestionan dinámicamente en updateSavedUnitsUI, pero añadimos
             // un flag global que esa función consultará)
-            window.__isAdmin = isAdmin;
+            // (window.__isAdmin eliminado: updateSavedUnitsUI usa isCurrentUserAdmin() directamente)
 
             // Quitar la clase de booting: ya sabemos qué mostrar (app)
             document.body.classList.remove('app-booting');
@@ -3013,7 +3013,7 @@
                 const name = coursesCache[currentCourseId]?.name || currentCourseId;
                 showModal(
                     'Curso finalizado',
-                    `El curso "${name}" está finalizado. No se pueden modificar sus datos.\n\nLos cursos se finalizan automáticamente al reaching el 30 de junio del año de finalización, o pueden ser marcados manualmente por el administrador.`,
+                    `El curso "${name}" está finalizado. No se pueden modificar sus datos.\n\nLos cursos se finalizan automáticamente al alcanzar el 30 de junio del año de finalización, o pueden ser marcados manualmente por el administrador.`,
                     [{ text: 'Entendido', type: 'primary' }]
                 );
                 return false;
@@ -3181,15 +3181,8 @@
                 }
 
                 applyCoursesToUI();
-                // Mostrar/ocultar botón "Gestionar cursos"
-                const btnManage = document.getElementById('btn-manage-courses');
-                if (isCurrentUserAdmin()) {
-                    btnManage.classList.remove('hidden');
-                    btnManage.classList.add('flex');
-                } else {
-                    btnManage.classList.add('hidden');
-                    btnManage.classList.remove('flex');
-                }
+                // Nota: el botón "Gestionar cursos" ya se gestiona en showApp()
+                // según el rol del usuario, no es necesario repetirlo aquí.
             });
 
             // Suscripción a /activeCourse
