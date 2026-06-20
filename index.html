@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
 
     <!-- PWA: Metadatos -->
-    <title>Evaluación Competencial ESO - IES Virgen de Villadiego</title>
+    <title>Perfil Competencial ESO - IES Virgen de Villadiego</title>
     <meta name="description" content="Gestión y evaluación competencial del alumnado de ESO (LOMLOE) - IES Virgen de Villadiego, Peñaflor (Sevilla)">
     <meta name="theme-color" content="#4f46e5">
     <meta name="color-scheme" content="light">
@@ -491,7 +491,7 @@
                 <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-2xl mb-4">
                     <svg class="w-9 h-9 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.256-.066a2 2 0 01.79-.066l1.066.066a3 3 0 003.926-3.685l-.243-.724a2 2 0 01.616-2.176l1.586-1.386a3 3 0 10-4-4.472l-1.586 1.386a2 2 0 01-2.176.616l-.724-.243a3 3 0 00-3.685 3.926l.066 1.066a2 2 0 01-.066.79l-.066.256zM15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800">Evaluación Competencial</h1>
+                <h1 class="text-2xl font-bold text-gray-800">Perfil Competencial</h1>
                 <p class="text-sm text-gray-600 mt-1">IES Virgen de Villadiego - Peñaflor, Sevilla</p>
             </div>
 
@@ -519,7 +519,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <svg class="w-8 h-8 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                <h1 class="text-xl font-bold tracking-tight">Evaluación Competencial Andalucía</h1>
+                <h1 class="text-xl font-bold tracking-tight">Perfil Competencial del Alumnado</h1>
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-sm font-medium text-indigo-200 hidden sm:block">
@@ -589,12 +589,12 @@
                 <div class="flex justify-between items-start mb-4">
                     <h2 class="text-lg font-semibold text-gray-700">Unidades Guardadas</h2>
                     <div class="flex gap-2 flex-wrap justify-end">
-                        <button onclick="exportJSON()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200" title="Guardar a archivo .json">
+                        <button id="btn-export-json" onclick="exportJSON()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200" title="Guardar a archivo .json">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             Exportar
                         </button>
                         <input type="file" id="import-json" accept=".json" class="hidden" onchange="importJSON(event)">
-                        <label for="import-json" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200 cursor-pointer" title="Cargar desde archivo .json">
+                        <label id="btn-import-json" for="import-json" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-gray-200 cursor-pointer" title="Cargar desde archivo .json">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                             Importar
                         </label>
@@ -602,7 +602,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                             Exportar PDF
                         </button>
-                        <button onclick="confirmDeleteAllUnits()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-red-200" title="Borrar todas las unidades">
+                        <button id="btn-delete-all-units" onclick="confirmDeleteAllUnits()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 py-1.5 px-3 rounded-lg flex items-center gap-1.5 transition-colors font-medium border border-red-200" title="Borrar todas las unidades">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             Borrar
                         </button>
@@ -631,7 +631,7 @@
             <!-- Contenido plegable -->
             <div id="upload-section-content" class="px-6 pb-6">
                 <div class="flex justify-end mb-4">
-                    <button onclick="clearAllFiles()" class="text-sm text-red-600 hover:text-red-800 transition-colors whitespace-nowrap">Limpiar archivos</button>
+                    <button id="btn-clear-files" onclick="clearAllFiles()" class="text-sm text-red-600 hover:text-red-800 transition-colors whitespace-nowrap">Limpiar archivos</button>
                 </div>
 
                 <!-- Carga Masiva -->
@@ -656,7 +656,7 @@
                 </div>
 
                 <div class="mt-8 flex flex-wrap gap-4 items-center">
-                    <button onclick="processFiles()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all flex items-center gap-2 transform active:scale-95">
+                    <button id="btn-process-files" onclick="processFiles()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all flex items-center gap-2 transform active:scale-95">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                         Procesar Calificaciones
                     </button>
@@ -688,7 +688,7 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                                 Exportar PDF
                             </button>
-                            <button onclick="confirmDeleteActiveCourse()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm flex items-center gap-1.5 shadow-sm" title="Eliminar este curso de la pantalla y la memoria">
+                            <button id="btn-delete-active-course" onclick="confirmDeleteActiveCourse()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm flex items-center gap-1.5 shadow-sm" title="Eliminar este curso de la pantalla y la memoria">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 Eliminar Curso
                             </button>
@@ -1184,6 +1184,7 @@
 
         // --- CARGA MASIVA ---
         function handleBulkUpload(event) {
+            if (!requireAdmin()) { event.target.value = ''; return; }
             const files = Array.from(event.target.files);
             if (files.length === 0) return;
 
@@ -1220,6 +1221,7 @@
         }
 
         function clearAllFiles() {
+            if (!requireAdmin()) return;
             COMPETENCES_ORDER.forEach(comp => {
                 const input = document.getElementById(`file-${comp}`);
                 if (input) input.value = '';
@@ -1297,6 +1299,7 @@
         // Nota: asignar select.value programáticamente (p.ej. en loadUnit) NO
         // dispara el evento 'change', así que no hace falta un flag de supresión.
         function onGroupChanged() {
+            // Solo el admin puede cambiar de grupo; si no es admin, no hacer nada.
             // Comprobar si hay algún archivo cargado en los inputs
             let anyFile = false;
             for (const comp of COMPETENCES_ORDER) {
@@ -1342,6 +1345,7 @@
 
         // --- EXPORTAR E IMPORTAR CONFIGURACIÓN (.JSON) ---
         function exportJSON() {
+            if (!requireAdmin()) return;
             if (Object.keys(savedUnits).length === 0) {
                 showModal('Exportar', 'No hay unidades guardadas para exportar.', [{ text: 'Entendido', type: 'primary' }]);
                 return;
@@ -1362,6 +1366,7 @@
         }
 
         function importJSON(event) {
+            if (!requireAdmin()) { event.target.value = ''; return; }
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1719,6 +1724,7 @@
         }
 
         async function processFiles() {
+            if (!requireAdmin()) return;
             // Verificar que hay un curso académico activo antes de procesar.
             // Las unidades se guardan en la BD aisladas por curso; sin curso activo
             // no se puede sincronizar.
@@ -2268,12 +2274,16 @@
                 btnDelete.onclick = () => confirmDeleteUnit(key);
 
                 wrapper.appendChild(btnLoad);
-                wrapper.appendChild(btnDelete);
+                // Solo el admin puede ver el botón de borrado
+                if (isCurrentUserAdmin()) {
+                    wrapper.appendChild(btnDelete);
+                }
                 container.appendChild(wrapper);
             });
         }
 
         function confirmDeleteUnit(key) {
+            if (!requireAdmin()) return;
             showModal('Borrar unidad', `¿Estás seguro de que deseas borrar los datos de la unidad "${key}"?`, [
                 { text: 'Cancelar', type: 'secondary' },
                 { text: 'Borrar', type: 'danger', action: () => {
@@ -2286,6 +2296,7 @@
         }
 
         function confirmDeleteAllUnits() {
+            if (!requireAdmin()) return;
             if (Object.keys(savedUnits).length === 0) {
                 showModal('Borrar', 'No hay unidades guardadas para borrar.', [{ text: 'Entendido', type: 'primary' }]);
                 return;
@@ -2330,6 +2341,7 @@
 
         // --- ELIMINAR CURSO ACTIVO ---
         function confirmDeleteActiveCourse() {
+            if (!requireAdmin()) return;
             const lvl = document.getElementById('select-level').value;
             const unit = document.getElementById('select-unit').value;
             const key = getUnitKey(lvl, unit);
@@ -2490,6 +2502,16 @@
             return currentUser && currentUser.isAdmin;
         }
 
+        // Guard: si el usuario no es admin, muestra un mensaje y devuelve false.
+        // Se usa al inicio de funciones sensibles (procesar, borrar, exportar, etc.)
+        function requireAdmin() {
+            if (!isCurrentUserAdmin()) {
+                showModal('Acceso denegado', 'Solo el administrador puede realizar esta acción. Tu perfil de usuario es de solo lectura: puedes consultar las tablas e imprimir, pero no modificar datos.', [{ text: 'Entendido', type: 'primary' }]);
+                return false;
+            }
+            return true;
+        }
+
         function showLoginScreen() {
             document.getElementById('login-screen').classList.remove('hidden');
             document.getElementById('user-bar').classList.add('hidden');
@@ -2503,14 +2525,62 @@
             document.getElementById('user-bar').classList.remove('hidden');
             document.getElementById('user-bar').classList.add('flex');
             document.getElementById('user-display').textContent = currentUser.username;
+
+            // Mostrar/ocultar elementos según rol
+            const isAdmin = currentUser.isAdmin;
             const adminBtn = document.getElementById('btn-user-admin');
-            if (currentUser.isAdmin) {
+            if (isAdmin) {
                 adminBtn.classList.remove('hidden');
                 adminBtn.classList.add('flex');
             } else {
                 adminBtn.classList.add('hidden');
                 adminBtn.classList.remove('flex');
             }
+
+            // === PERMISOS DE USUARIO NORMAL (no admin) ===
+            // El usuario normal SOLO puede: ver las tablas, navegar por alumnos,
+            // e imprimir/exportar PDF. No puede procesar archivos, borrar, exportar
+            ///importar JSON, ni gestionar cursos/usuarios.
+            const adminOnlyIds = [
+                'btn-manage-courses',     // Gestionar cursos
+                'btn-process-files',      // Procesar Calificaciones
+                'btn-clear-files',        // Limpiar archivos
+                'btn-export-json',        // Exportar JSON
+                'btn-import-json',        // Importar JSON
+                'btn-delete-all-units',   // Borrar todas las unidades
+                'btn-delete-active-course'// Eliminar Curso activo
+            ];
+            adminOnlyIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (isAdmin) {
+                        el.classList.remove('hidden');
+                    } else {
+                        el.classList.add('hidden');
+                    }
+                }
+            });
+
+            // El botón "Seleccionar Varios Archivos" y los inputs de archivos
+            // también se ocultan para usuarios no admin
+            const bulkUpload = document.getElementById('bulk-upload');
+            const bulkLabel = document.querySelector('label[for="bulk-upload"]');
+            if (bulkUpload) bulkUpload.classList.toggle('hidden', !isAdmin);
+            if (bulkLabel) bulkLabel.classList.toggle('hidden', !isAdmin);
+
+            // El grid de carga individual de archivos se oculta para no-admin
+            const uploadGrid = document.getElementById('upload-grid');
+            if (uploadGrid) uploadGrid.classList.toggle('hidden', !isAdmin);
+
+            // El botón "Limpiar archivos" dentro del acordeón
+            const clearFilesBtn = document.querySelector('#upload-section-content button[onclick="clearAllFiles()"]');
+            if (clearFilesBtn) clearFilesBtn.classList.toggle('hidden', !isAdmin);
+
+            // Las unidades guardadas: ocultar botones de borrado individual
+            // (se gestionan dinámicamente en updateSavedUnitsUI, pero añadimos
+            // un flag global que esa función consultará)
+            window.__isAdmin = isAdmin;
+
             // Quitar la clase de booting: ya sabemos qué mostrar (app)
             document.body.classList.remove('app-booting');
         }
