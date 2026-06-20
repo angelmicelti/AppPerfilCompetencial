@@ -596,7 +596,7 @@
         </div>
 
         <!-- Panel de Carga de Archivos (Acordeón, inicialmente desplegado) -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+        <div id="upload-section-wrapper" class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
             <!-- Cabecera del acordeón (clic para plegar/desplegar) -->
             <button type="button" onclick="toggleUploadSection()" id="upload-section-header" class="w-full flex justify-between items-center p-6 hover:bg-gray-50 transition-colors text-left">
                 <div>
@@ -2522,18 +2522,10 @@
                 }
             });
 
-            // El botón "Seleccionar Varios Archivos" y los inputs de archivos
-            // también se ocultan para usuarios no admin
-            const bulkUpload = document.getElementById('bulk-upload');
-            const bulkLabel = document.querySelector('label[for="bulk-upload"]');
-            if (bulkUpload) bulkUpload.classList.toggle('hidden', !isAdmin);
-            if (bulkLabel) bulkLabel.classList.toggle('hidden', !isAdmin);
-
-            // (El grid individual de archivos ha sido eliminado: solo se usa carga masiva)
-
-            // El botón "Limpiar archivos" dentro del acordeón
-            const clearFilesBtn = document.querySelector('#upload-section-content button[onclick="clearAllFiles()"]');
-            if (clearFilesBtn) clearFilesBtn.classList.toggle('hidden', !isAdmin);
+            // El acordeón completo de "Cargar Archivos" se oculta para usuarios no-admin.
+            // El usuario normal solo consulta datos ya cargados por el admin; no puede procesar.
+            const uploadWrapper = document.getElementById('upload-section-wrapper');
+            if (uploadWrapper) uploadWrapper.classList.toggle('hidden', !isAdmin);
 
             // Las unidades guardadas: ocultar botones de borrado individual
             // (se gestionan dinámicamente en updateSavedUnitsUI, pero añadimos
