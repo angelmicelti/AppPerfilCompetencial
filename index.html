@@ -743,8 +743,7 @@
                             </div>
                         </div>
 
-                        <!-- Rótulo TITULA / NO TITULA -->
-                        <div id="titula-banner" class="hidden px-6 py-4 text-center font-extrabold text-2xl mb-4"></div>
+                        <!-- (El banner TITULA/NO TITULA se ha movido a la sección de titulación debajo de la tabla) -->
 
                         <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
                             <div class="overflow-x-auto">
@@ -759,6 +758,50 @@
                             </div>
                             <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
                                 <p><strong>Leyenda:</strong> <span class="inline-block w-3 h-3 bg-red-500 rounded mr-1 align-middle"></span> Suspensa (&lt;5) &nbsp;|&nbsp; <span class="inline-block w-3 h-3 bg-emerald-500 rounded mr-1 align-middle"></span> Aprobada (≥5) &nbsp;|&nbsp; <span class="inline-block w-3 h-3 bg-gray-200 rounded mr-1 align-middle"></span> Sin relación con este objetivo &nbsp;|&nbsp; <strong>Umbral de titulación:</strong> 6 o más objetivos conseguidos de 12.</p>
+                            </div>
+                        </div>
+
+                        <!-- ============================================================ -->
+                        <!--  SECCIÓN TITULACIÓN                                           -->
+                        <!-- ============================================================ -->
+                        <div id="titulation-section" class="mt-6 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                            <div class="px-6 py-4 bg-indigo-50 border-b border-indigo-100">
+                                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                    Titulación
+                                </h2>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <div class="text-center">
+                                    <h3 id="titulation-student-name" class="text-2xl font-bold text-gray-800"></h3>
+                                </div>
+                                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                    <div id="titulation-competences-box" class="flex-1 rounded-2xl p-6 text-center border-2">
+                                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Competencias superadas</p>
+                                        <p id="titulation-competences-value" class="text-4xl font-extrabold"></p>
+                                        <p class="text-sm text-gray-400 mt-1">de 8</p>
+                                    </div>
+                                    <div id="titulation-objectives-box" class="flex-1 rounded-2xl p-6 text-center border-2">
+                                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Objetivos conseguidos</p>
+                                        <p id="titulation-objectives-value" class="text-4xl font-extrabold"></p>
+                                        <p class="text-sm text-gray-400 mt-1">de 12</p>
+                                    </div>
+                                </div>
+                                <div id="titulation-result" class="text-center py-6 rounded-2xl">
+                                    <p id="titulation-result-text" class="text-3xl font-extrabold"></p>
+                                    <p id="titulation-result-detail" class="text-sm mt-2"></p>
+                                </div>
+                                <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+                                    <button id="btn-prev-student" onclick="navigateStudent(-1)" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors flex items-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                                        Anterior
+                                    </button>
+                                    <span id="titulation-student-counter" class="text-sm text-gray-500"></span>
+                                    <button id="btn-next-student" onclick="navigateStudent(1)" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors flex items-center gap-2">
+                                        Siguiente
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1927,12 +1970,15 @@
         function updateObjectivesSection() {
             const level = document.getElementById('select-level').value;
             const section = document.getElementById('objectives-section');
+            const titulation = document.getElementById('titulation-section');
             if (level === '4' && currentProcessedData) {
                 section.classList.remove('hidden');
+                if (titulation) titulation.classList.remove('hidden');
                 populateStudentSelector();
                 renderObjectivesTable();
             } else {
                 section.classList.add('hidden');
+                if (titulation) titulation.classList.add('hidden');
             }
         }
 
@@ -2129,8 +2175,8 @@
             totalTr.innerHTML = totalHtml;
             tbody.appendChild(totalTr);
 
-            // Actualizar rótulo TITULA / NO TITULA
-            updateTitulaBanner(status.totalAchieved);
+            // Actualizar sección de titulación
+            updateTitulationSection(student, status);
 
             // Guardar los objetivos calculados en el objeto del estudiante para
             // que se sincronicen con Firebase cuando se guarde la unidad.
@@ -2142,24 +2188,95 @@
             student.objectives.titula = status.totalAchieved >= 6;
         }
 
-        // Muestra u oculta el rótulo TITULA / NO TITULA.
-        // - 6 o más objetivos conseguidos → "TITULA" (verde, destacado)
-        // - menos de 6 → "NO TITULA" (rojo)
-        function updateTitulaBanner(totalAchieved) {
-            const banner = document.getElementById('titula-banner');
-            if (totalAchieved === null || totalAchieved === undefined) {
-                banner.classList.add('hidden');
-                banner.textContent = '';
+        // ============================================================
+        //  SECCIÓN TITULACIÓN
+        // ============================================================
+        function updateTitulationSection(student, objectivesStatus) {
+            const section = document.getElementById('titulation-section');
+            if (!student || !objectivesStatus) {
+                if (section) section.classList.add('hidden');
                 return;
             }
-            banner.classList.remove('hidden');
-            if (totalAchieved >= 6) {
-                banner.textContent = `★ TITULA ★ (${totalAchieved}/12 objetivos conseguidos)`;
-                banner.className = 'px-6 py-5 text-center font-extrabold text-2xl bg-emerald-100 text-emerald-800 border-y-2 border-emerald-300';
+            section.classList.remove('hidden');
+
+            document.getElementById('titulation-student-name').textContent = student.name || '';
+
+            const select = document.getElementById('objectives-student-select');
+            const idx = parseInt(select.value, 10);
+            const total = currentProcessedData ? currentProcessedData.length : 0;
+            document.getElementById('titulation-student-counter').textContent = total > 0 ? `Alumno ${idx + 1} de ${total}` : '';
+
+            // Competencias superadas (de 8)
+            const compPassed = COMPETENCES_ORDER.filter(comp => {
+                const g = student.competences?.[comp];
+                return g !== null && g !== undefined && g >= 5;
+            }).length;
+            const compBox = document.getElementById('titulation-competences-box');
+            document.getElementById('titulation-competences-value').textContent = compPassed;
+            const compColor = getGradeBoxColor(compPassed, 8, 5);
+            compBox.style.backgroundColor = compColor.bg;
+            compBox.style.borderColor = compColor.border;
+            compBox.style.color = compColor.text;
+
+            // Objetivos conseguidos (de 12)
+            const objAchieved = objectivesStatus.totalAchieved || 0;
+            const objBox = document.getElementById('titulation-objectives-box');
+            document.getElementById('titulation-objectives-value').textContent = objAchieved;
+            const objColor = getGradeBoxColor(objAchieved, 12, 6);
+            objBox.style.backgroundColor = objColor.bg;
+            objBox.style.borderColor = objColor.border;
+            objBox.style.color = objColor.text;
+
+            // Resultado: combinación de competencias y objetivos
+            const compOk = compPassed >= 5;
+            const objOk = objAchieved >= 6;
+            const resultDiv = document.getElementById('titulation-result');
+            const resultText = document.getElementById('titulation-result-text');
+            const resultDetail = document.getElementById('titulation-result-detail');
+
+            if (compOk && objOk) {
+                resultText.textContent = '★ TITULA ★';
+                resultDetail.textContent = 'Competencias superadas y objetivos de etapa conseguidos.';
+                resultDiv.style.backgroundColor = '#d1fae5';
+                resultDiv.style.color = '#065f46';
+            } else if (compOk !== objOk) {
+                resultText.textContent = '⚠ DEBATE EN EL SENO DEL EQUIPO DOCENTE ⚠';
+                resultDetail.textContent = compOk
+                    ? `Competencias superadas (${compPassed}/8) pero objetivos no alcanzados (${objAchieved}/12).`
+                    : `Objetivos alcanzados (${objAchieved}/12) pero competencias no superadas (${compPassed}/8).`;
+                resultDiv.style.backgroundColor = '#fef3c7';
+                resultDiv.style.color = '#92400e';
             } else {
-                banner.textContent = `✕ NO TITULA ✕ (${totalAchieved}/12 objetivos conseguidos)`;
-                banner.className = 'px-6 py-5 text-center font-extrabold text-2xl bg-red-100 text-red-800 border-y-2 border-red-300';
+                resultText.textContent = '✕ NO TITULA ✕';
+                resultDetail.textContent = `Competencias no superadas (${compPassed}/8) y objetivos no alcanzados (${objAchieved}/12).`;
+                resultDiv.style.backgroundColor = '#fee2e2';
+                resultDiv.style.color = '#991b1b';
             }
+        }
+
+        function getGradeBoxColor(value, max, threshold) {
+            if (value >= threshold) {
+                const ratio = max > threshold ? (value - threshold) / (max - threshold) : 1;
+                const l = 90 - ratio * 45;
+                return { bg: `hsl(140, 70%, ${l}%)`, border: `hsl(140, 70%, ${Math.max(35, l - 20)}%)`, text: l < 55 ? '#ffffff' : '#1f2937' };
+            } else {
+                const ratio = threshold > 0 ? (threshold - value) / threshold : 1;
+                const l = 90 - ratio * 45;
+                return { bg: `hsl(0, 70%, ${l}%)`, border: `hsl(0, 70%, ${Math.max(35, l - 20)}%)`, text: l < 55 ? '#ffffff' : '#1f2937' };
+            }
+        }
+
+        function navigateStudent(direction) {
+            const select = document.getElementById('objectives-student-select');
+            if (!select || !currentProcessedData || currentProcessedData.length === 0) return;
+            let idx = parseInt(select.value, 10);
+            if (isNaN(idx)) idx = 0;
+            idx += direction;
+            if (idx < 0) idx = currentProcessedData.length - 1;
+            if (idx >= currentProcessedData.length) idx = 0;
+            select.value = String(idx);
+            renderObjectivesTable();
+            selectStudentInObjectives(idx);
         }
 
         // --- GESTIÓN DE UNIDADES (MEMORIA + BD) ---
